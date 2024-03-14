@@ -6,6 +6,7 @@ tags:
   - math
 ---
 
+<p>
 Input: a matrix \( A \in \mathbb{R}^{m \times n} \) and a vector \( y \in \mathbb{R}^m \).  
 Compute \( \Gamma \leftarrow I - A^{\text{T}}(AA^{\text{T}})^{-1}A \), and \( \tilde{x} \leftarrow A^{\text{T}}(AA^{\text{T}})^{-1}y \).  
 \( x_0 \leftarrow 0 \).  
@@ -14,25 +15,7 @@ repeat many times
 \( t \leftarrow t + 1 \)  
 \( x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \text{sign}(x_{t-1}) \right) \);  
 end while  
-
-$$\alpha$$
-
-$\alpha$
-
-ok \\(\alpha\\)
-
-$$
-\displaylines{
-Input: a matrix A \in \mathbb{R}^{m \times n} and a vector y \in \mathbb{R}^m.   
-Compute \Gamma \leftarrow I - A^*(A A^*)^{-1} A, and \tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y.  
-x_0 \leftarrow 0.  
-t \leftarrow 0.  
-repeat many times  
-t \leftarrow t + 1  
-x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \operatorname{sign} \left( x_{t-1} \right) \right) ;  
-end while
-}
-$$
+</p>
 
 ```python
 from IPython.core.getipython import get_ipython      # for %matplotlib
