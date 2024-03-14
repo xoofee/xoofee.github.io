@@ -8,7 +8,19 @@ tags:
 
 This is a python implementation of Algorithm **L1-Minimization by Projected Subgradient** from *High-Dimensional Data Analysis with Low-Dimensional Models - John Wright, Yi Ma*, Page 63
 
-# Algorithm 2.2: L1-Minimization by Projected Subgradient
+# Problem
+
+$$A$$ is a matrix with size $$m \times n$$, we want to recovery original sparse signal x from observation y
+
+$$
+\begin{eqnarray}
+\min ||x||_1 \\
+s.t. \  Ax=y 
+\end{eqnarray}
+$$
+
+
+# Algorithm 2.2: L1-Minimization by Projected Subgradient (from the book)
 
 <p>Input: a matrix \(A \in \mathbb{R}^{m \times n}\) and a vector \(y \in \mathbb{R}^m\).</p>  
 <p>Compute \(\Gamma \leftarrow I - A^*(A A^*)^{-1} A\), and \(\tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y\).</p>  
