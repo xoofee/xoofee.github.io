@@ -6,16 +6,33 @@ tags:
   - math
 ---
 
-<p>
-Input: a matrix \( A \in \mathbb{R}^{m \times n} \) and a vector \( y \in \mathbb{R}^m \).  
-Compute \( \Gamma \leftarrow I - A^{\text{T}}(AA^{\text{T}})^{-1}A \), and \( \tilde{x} \leftarrow A^{\text{T}}(AA^{\text{T}})^{-1}y \).  
-\( x_0 \leftarrow 0 \).  
-\( t \leftarrow 0 \).  
+This is a python implementation of Algorithm **L1-Minimization by Projected Subgradient** from *High-Dimensional Data Analysis with Low-Dimensional Models - John Wright, Yi Ma*, Page 63
+
+# Algorithm 2.2: L1-Minimization by Projected Subgradient
+
+<p>Input: a matrix \(A \in \mathbb{R}^{m \times n}\) and a vector \(y \in \mathbb{R}^m\).</p>  
+<p>Compute \(\Gamma \leftarrow I - A^*(A A^*)^{-1} A\), and \(\tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y\).</p>  
+<p>\(x_0 \leftarrow 0\).</p>  
+<p>\(t \leftarrow 0\).</p>  
+<p>repeat many times</p>  
+<p>\(t \leftarrow t + 1\)</p>  
+<p>\(x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \operatorname{sign} \left( x_{t-1} \right) \right)\);</p>  
+<p>end while</p>
+
+<!-- 
+original latex: 
+
+Input: a matrix A \in \mathbb{R}^{m \times n} and a vector y \in \mathbb{R}^m.   
+Compute \Gamma \leftarrow I - A^*(A A^*)^{-1} A, and \tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y.  
+x_0 \leftarrow 0.  
+t \leftarrow 0.  
 repeat many times  
-\( t \leftarrow t + 1 \)  
-\( x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \text{sign}(x_{t-1}) \right) \);  
-end while  
-</p>
+t \leftarrow t + 1  
+x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \operatorname{sign} \left( x_{t-1} \right) \right) ;  
+end while 
+采用MathJax语法重写此段，输出源码。注意每一行需要能正确的显示，而不是全部显示在一行中 -->
+
+# code
 
 ```python
 from IPython.core.getipython import get_ipython      # for %matplotlib
@@ -32,8 +49,9 @@ A = np.random.randn(m, n)    # todo: also try for a gaussian matrix
 B = A.T @ np.linalg.inv(A @ A.T)
 
 # make x sparse
+sparsities = range(20, 60)
 success_rates = []
-for sparsity in range(20, 50):
+for sparsity in sparsities:
     print('sparsity:', sparsity)
     tries = 10
     success = 0.0
@@ -62,16 +80,11 @@ for sparsity in range(20, 50):
     print('\n    success rate:', success)
     success_rates.append(success)
 
-plt.figure(); plt.plot(success_rates);
+plt.figure(); plt.plot(sparsities, success_rates, '.-'); plt.xlabel('sparsity'); plt.ylabel('success rates')
+
 ```
 
-![Alt text](/images/blogs/2024/03/l0-optimzation_phase_transition/transition.png)
+# result
 
-Headings are cool
-======
+![L0 phase transition curve](/images/blogs/2024/03/l0-optimzation_phase_transition/transition.png)
 
-You can have many headings
-======
-
-Aren't headings cool?
-------
