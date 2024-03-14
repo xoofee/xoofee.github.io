@@ -25,3 +25,8 @@ end while
 how to restore:
 - _config.yml:235-269
 - _pages/sitemap.md: 12-15, 24-37
+
+# files for download
+
+files in "files" will be list in the sitemap.xml
+
