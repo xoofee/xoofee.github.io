@@ -1,6 +1,6 @@
 README.extra.md
 
-
+# bundle install stuck
 gem sources --add https://gems.ruby-china.com/ --remove https://rubygems.org/
 gem sources -l https://gems.ruby-china.com
 
@@ -19,3 +19,9 @@ end while
 采用MathJax语法重写此段，输出源码。注意每一行需要能正确的显示，而不是全部显示在一行中
 
 ```
+
+# temporarily disable 4 types of pages
+
+how to restore:
+- _config.yml:235-269
+- _pages/sitemap.md: 12-15, 24-37
