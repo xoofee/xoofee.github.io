@@ -56,8 +56,8 @@ import matplotlib.pyplot as plt
 m = 100
 n = 200
 
-A = np.random.randn(m, n)    # todo: also try for a gaussian matrix
-# A = np.random.random([m, n])    # todo: also try for a gaussian matrix
+A = np.random.randn(m, n)
+# A = np.random.random([m, n])
 B = A.T @ np.linalg.inv(A @ A.T)
 
 # make x sparse
