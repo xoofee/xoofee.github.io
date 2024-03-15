@@ -1,4 +1,5 @@
-README.extra.md
+# see
+- https://idratherbewriting.com/jekylldoctheme-separate-outputs/mydoc/home.html
 
 # bundle install stuck
 ```bash
