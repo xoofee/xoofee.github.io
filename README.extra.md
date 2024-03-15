@@ -70,3 +70,25 @@ analytics:
   gtag('config', 'G-VBS36KC0MW');
 </script>
 ```
+
+# blog abstract
+
+The abstract is extacted from post by the first empty lines
+
+## good
+```
+
+Abstract xxx
+
+Content
+```
+
+## bad
+```markdown
+
+Abstract xxx
+  
+Content
+
+```
+There are two spaces before Content, jekyll will connect it to abstract

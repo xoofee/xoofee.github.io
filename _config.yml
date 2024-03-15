@@ -211,6 +211,11 @@ collections:
     output: true
     permalink: /:collection/:path/
 
+  # TODO: remove
+  # tags_page:
+  #   output: true
+  #   permalink: /:collection/:path/
+
 
 # Defaults
 defaults:
@@ -268,6 +273,13 @@ defaults:
   #     author_profile: true
   #     share: true
 
+  # add in 2024.03.15 for tags, TODO: remove it
+  # - scope:
+  #     path: ""                #所有路径下
+  #     type: tags_page         #指明类别
+  #   values:
+  #     layout: page_tag        #声明layout
+  #     permalink: /tag/:title/  #链接
 
 # Sass/SCSS
 sass:

@@ -14,6 +14,9 @@ main:
         
  - title: "Blog"
    url: /posts/
+        
+ - title: "Categories"
+   url: /categories/
     
 #  - title: "CV"
 #    url: /cv/
