@@ -1,7 +1,7 @@
 ---
 title: 'L0 optimization phase transition'
 date: 2024-03-14
-permalink: /posts/2024/03/l0-optimzation_phase_transition/
+permalink: /posts/2024/03/l0-optimzation_phase_transition
 tags:
   - math
 ---

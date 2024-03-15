@@ -1,7 +1,7 @@
 ---
 title: 'Projection onto an Affine Subspace'
 date: 2024-03-13
-permalink: /posts/2024/03/projection_onto_affine_space/
+permalink: /posts/2024/03/projection_onto_affine_space
 tags:
   - math
 ---
