@@ -2,21 +2,17 @@
 title: 'Projection onto an Affine Subspace'
 date: 2024-03-13
 permalink: /posts/2024/03/projection_onto_affine_space
-tags:
-  - math
+categories: math
 ---
 
-# projection problem
-  
-<p>Let \(A\) be a matrix with size \(m \times n\). We want to project point z onto a plane </p>  
-  
+<p>Let \(A\) be a matrix with size \(m \times n\). We want to project point z onto a plane</p>
 <div>  
 \begin{eqnarray}  
 \arg \min_{x} \lVert z-x \rVert_2 \\  
 \text{s.t. } Ax = y  
 \end{eqnarray}  
 </div>  
-  
+
 # Full Row Rank
   
 This problem can be handled using the Lagrangian multiplier method

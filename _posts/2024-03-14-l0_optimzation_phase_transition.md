@@ -2,11 +2,10 @@
 title: 'L0 optimization phase transition'
 date: 2024-03-14
 permalink: /posts/2024/03/l0-optimzation_phase_transition
-tags:
-  - math
+categories: math
 ---
 
-This is a python implementation of Algorithm **L1-Minimization by Projected Subgradient** from *High-Dimensional Data Analysis with Low-Dimensional Models - John Wright, Yi Ma*, Page 63
+Python implementation of Algorithm **L1-Minimization by Projected Subgradient** from *High-Dimensional Data Analysis with Low-Dimensional Models - John Wright, Yi Ma*, Page 63
 
 # Problem
 
