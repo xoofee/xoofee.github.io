@@ -9,7 +9,7 @@ Python implementation of Algorithm **L1-Minimization by Projected Subgradient** 
 
 # Problem
 
-$$A$$ is a matrix with size $$m \times n$$, we want to recovery original sparse signal x from observation y
+$$A$$ is a matrix with size $$m \times n$$, we want to recovery original sparse signal x from observation y.
 
 $$
 \begin{eqnarray}
@@ -18,6 +18,7 @@ s.t. \  Ax=y
 \end{eqnarray}
 $$
 
+It is known as [basis pursuit](https://en.wikipedia.org/wiki/Basis_pursuit)
 
 # Algorithm 2.2: L1-Minimization by Projected Subgradient (from the book)
 
