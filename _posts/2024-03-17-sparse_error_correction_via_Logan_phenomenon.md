@@ -1,5 +1,5 @@
 ---
-title: 'Sparse Error Correction via Logan Phenomenon'
+title: 'Sparse Error Correction via Logan Phenomenon [python]'
 date: 2024-03-17
 permalink: /posts/2024/03/sparse_error_correction_via_Logan_phenomenon
 categories: math

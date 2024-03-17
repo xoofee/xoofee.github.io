@@ -1,5 +1,5 @@
 ---
-title: 'L1 optimization phase transition'
+title: 'L1 optimization phase transition [python]'
 date: 2024-03-14
 permalink: /posts/2024/03/l1-optimzation_phase_transition
 categories: math
@@ -18,7 +18,7 @@ s.t. \  Ax=y
 \end{eqnarray}
 $$
 
-It is known as [basis pursuit](https://en.wikipedia.org/wiki/Basis_pursuit)
+It is known as [basis pursuit](https://en.wikipedia.org/wiki/Basis_pursuit) and equal to [lasso regression]()https://en.wikipedia.org/wiki/Lasso_(statistics)
 
 # Algorithm 2.2: L1-Minimization by Projected Subgradient (from the book)
 

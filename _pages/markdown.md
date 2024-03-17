@@ -1,9 +1,9 @@
 ---
-permalink: /markdown/
+permalink: /markdown
 title: "Markdown"
 author_profile: true
 redirect_from: 
-  - /md/
+  - /md
   - /markdown.html
 ---
 
@@ -51,6 +51,24 @@ $$
 The default delimiters of `$$...$$` and `\\[...\\]` are supported for displayed mathematics, while `\\(...\\)` should be used for in-line mathematics (ex., \\(a^2 + b^2 = c^2\\))
 
 **Note** that since Academic Pages uses Markdown which cases some interference with MathJax and LaTeX for escaping characters and new lines, although [some workarounds exist](https://math.codidact.com/posts/278763/278772#answer-278772).
+
+
+$a$ is $\Sigma$, $$\Omega$$
+
+$$ 
+x'[r:] = z'[r:]    \\
+
+x'[:r] = S_r^{-1} y'[:r]  
+
+$$  
+
+or
+
+
+$$ x'[r:] = z'[r:] $$
+
+$$ x'[:r] = S_r^{-1} y'[:r] $$  
+
 
 ## Markdown guide
 

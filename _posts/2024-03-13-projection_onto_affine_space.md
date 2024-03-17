@@ -1,5 +1,5 @@
 ---
-title: 'Projection onto an Affine Subspace'
+title: 'Projection onto an Affine Subspace [proof]'
 date: 2024-03-13
 permalink: /posts/2024/03/projection_onto_affine_space
 categories: math
