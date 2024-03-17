@@ -9,27 +9,29 @@ Python implementation of Algorithm **L1-Minimization by Projected Subgradient** 
 
 # Problem
 
-$$A$$ is a matrix with size $$m \times n$$, we want to recovery original sparse signal x from observation y.
+\\(A\\) is a matrix with size \\(m \times n\\), we want to recovery original sparse signal \\(x\\) from observation \\(y\\).
 
 $$
-\begin{eqnarray}
+\begin{align}
 \min ||x||_1 \\
 s.t. \  Ax=y 
-\end{eqnarray}
+\end{align}
 $$
 
-It is known as [basis pursuit](https://en.wikipedia.org/wiki/Basis_pursuit) and equal to [lasso regression]()https://en.wikipedia.org/wiki/Lasso_(statistics)
+It is known as [basis pursuit](https://en.wikipedia.org/wiki/Basis_pursuit) and equal to [lasso regression](https://en.wikipedia.org/wiki/Lasso_(statistics))
 
 # Algorithm 2.2: L1-Minimization by Projected Subgradient (from the book)
 
-<p>Input: a matrix \(A \in \mathbb{R}^{m \times n}\) and a vector \(y \in \mathbb{R}^m\).</p>  
-<p>Compute \(\Gamma \leftarrow I - A^*(A A^*)^{-1} A\), and \(\tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y\).</p>  
-<p>\(x_0 \leftarrow 0\).</p>  
-<p>\(t \leftarrow 0\).</p>  
-<p>repeat many times</p>  
-<p>\(t \leftarrow t + 1\)</p>  
-<p>\(x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \operatorname{sign} \left( x_{t-1} \right) \right)\);</p>  
-<p>end while</p>
+
+Input: a matrix \\(A \in \mathbb{R}^{m \times n}\\) and a vector \\(y \in \mathbb{R}^m\\).
+
+Compute \\(\Gamma \leftarrow I - A^*(A A^*)^{-1} A\\), and \\(\tilde{x} \leftarrow A^{\dagger} y = A^*(A A^*)^{-1} y\\).  
+\\(x_0 \leftarrow 0\\).  
+\\(t \leftarrow 0\\).  
+repeat many times  
+\\(t \leftarrow t + 1\\)  
+\\(x_t \leftarrow \tilde{x} + \Gamma \left( x_{t-1} - \frac{1}{t} \operatorname{sign} \left( x_{t-1} \right) \right)\\);  
+end while
 
 <!-- 
 original latex: 
