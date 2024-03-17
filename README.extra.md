@@ -7,7 +7,53 @@ gem sources --add https://gems.ruby-china.com/ --remove https://rubygems.org/
 gem sources -l https://gems.ruby-china.com
 ```
 
-# convert latex to MathJax (used by Jekyll)
+# Math
+
+## inline
+
+Only in vscode: $y=Ax$
+
+Both ok : \\(E=mc^2\\) in MathJax and VScode after hack of textmath.js
+
+## multiline 
+
+- aligned
+
+$$\begin{align}
+x'[:r] &= S_r^{-1} y'[:r]  \\
+x &= V \{ S_r^{-1} y'[:r] \ (V^*z)[r:] \} 
+\end{align}$$
+
+multiple lines by double dollar sign:
+
+- not aligned: just use multiple `$$`
+
+$$ \arg \min_{x} \lVert z-x \rVert_2 $$
+
+$$ \text{s.t. } Ax = y   $$  
+
+## hack of textmath (to rendered both in VSCODE and Jekyll MathJax)
+
+1. Install Markdown+Math
+2. Set extension option Delimiters to **brackets**
+3. Modify texmath.js
+
+~/.vscode/extensions/goessner.mdmath-2.7.4/node_modules/markdown-it-texmath/texmath.js
+```javascript
+texmath.rules = {
+    brackets: {
+        inline: [ 
+            {   name: 'math_inline',
+                rex: /\\\\\((.+?)\\\\\)/gy,
+                tmpl: '<eq>$1</eq>',
+                tag: '\\\\('
+            }
+        ],
+```
+
+add \\ in rex and tag so to use `\\( ... \\)`
+
+# ~~convert latex to MathJax (used by Jekyll)~~
 
 ```
 Input: a matrix A \in \mathbb{R}^{m \times n} and a vector y \in \mathbb{R}^m.   
