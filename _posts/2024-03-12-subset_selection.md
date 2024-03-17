@@ -19,13 +19,13 @@ $$A$$ is a matrix with size $$m \times n$$, we want to recovery original sparse 
 \end{eqnarray}  
 </div>  
 
-
-```python
-"""
 Subset selection provides interpretable models but can be extremely variable because it is a discrete process-regressors are either retained or dropped from the model. Small changes in the data can result in very different models being selected and this can reduce its prediction accuracy.
 
-1996 Tibshirani - Regression Shrinkage and Selection via the Lasso
-"""
+from 1996 Tibshirani - Regression Shrinkage and Selection via the Lasso
+
+# code
+
+```python
 
 # %%
 import numpy as np
