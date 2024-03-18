@@ -60,6 +60,23 @@ Only in vscode: $y=Ax$
 
 Both ok : \\(E=mc^2\\) in MathJax and VScode after hack of textmath.js
 
+Note: when inline equations are complicated and include {} or \| the render may be true in vscode but wrong in web. for example:
+
+ok in vscode and web:  `$$B = \{ x | x < 1 \} $$`
+
+$$B = \{ x | x < 1 \} $$
+
+wrong in web:  `$$B = \{ x | x < 1 \} $$`
+
+\\(B = \{ x | x < 1 \} \\)
+
+wrong in web too:  `$$B = \{ x < 1 \} $$`, { } are missed
+
+\\(B = \{ x < 1 \} \\)
+
+If you get those errors, split one line to multiple lines
+
+
 ## multiline 
 
 - aligned
