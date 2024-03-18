@@ -7,6 +7,7 @@ categories: math
 
 Problem summary of *High-Dimensional Data Analysis with Low-Dimensional Models - John Wright, Yi Ma*
 
+>"For since the fabric of the universe is most perfect and the work of a most wise Creator, nothing at all takes place in the universe in which some rule of maximum or minimum does not appear." - Leonhard Euler 
 
 * TOC
 {:toc}
@@ -34,8 +35,14 @@ $$ \text{s.t. } \  \Vert x \Vert _1 \le k $$
 
 Our simulation studies suggest that the lasso enjoys some of the favourable properties of both subset selection and ridge regression. It produces interpretable models like subset selection and exhibits the stability of ridge regression. (from 1996 R. Tibshirani. Regression shrinkage and selection via the LASSO)
 
-Since \\( \Vert Ax - y \Vert _2^2 \\) is convex, and \\(B_k:=\{x | \Vert x \Vert _1 \le k \}\\) is a convex set, the optimal point must lie on the boundary of \\(B_k\\) if the solution of the least square (OLS) problem, \\( \arg \min_{x} \Vert Ax - y \Vert _2^2 \\), (a point \\(\hat x^0\\) when \\(A\\) has full rank, or an affine subspace if not) is outside of \\(B_k\\) or 
-Otherwise the the condition is already satisfied.
+Since \\( \Vert Ax - y \Vert _2^2 \\) is convex, and \\( B_k ( \Vert x \Vert _1 \le k ) \\) is a convex set, the optimal point must lie on the boundary of \\(B_k\\), if the unconstrained minimum of the least square (OLS) problem,
+
+$$ \arg \min_{x} \Vert Ax - y \Vert _2^2 $$
+
+ is outside of \\(B_k\\).
+Otherwise the the condition is already satisfied (inactive constraint).
+
+The minimum is a point \\(\hat x^0\\) when \\(A\\) has full rank, or an affine subspace if not
 
 \\( \Vert Ax - y \Vert _2^2 = const \\) is a (maybe degenerate) hyper ellipsoid
 
