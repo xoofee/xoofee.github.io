@@ -1,5 +1,5 @@
 ---
-title: 'L1 optimization by projected subgradient phase transition [python]'
+title: 'L1 optimization by projected subgradient [python]'
 date: 2024-03-14
 permalink: /posts/2024/03/l1-optimzation_by_projected_subgradient
 categories: math

@@ -46,20 +46,8 @@ x &= z - A^*\lambda \\
 \end{align}
 $$
 
-# Geometric Interpretation
 
-From align (1), \\(z-x = A^*\lambda\\), that is to say, the line from \\(z\\) to the nearest point \\(x\\) is in the row space (span of rows of \\(A\\)), which is orthogonal to \\(\text{null}(A)\\).
-
-$$
-\begin{align}
-\forall \hat{x} \in C := \{ x | Ax = y \} \\
-\langle z-x, x - \hat{x} \rangle = 0
-\end{align}
-$$
-
-See <a href="https://en.wikipedia.org/wiki/Row_and_column_spaces">Row and Column Spaces</a> on Wikipedia for more details.
-
-Without Full Row Rank (\\(r < m\\))</h2>
+# Without Full Row Rank (\\(r < m\\))
 
 $$
 \begin{align}
@@ -71,7 +59,7 @@ $$
 Let \\(z' = V^*z, x' = V^*x, y' = U^*y\\), we then want to project \\(z'\\) to the affine space \\(Sx' = y'\\), which can be reduced to:
 
 $$
-L(x', \lambda) = \frac{1}{2} \lVert z'-x' \rVert_2^2 + (S_rx'[:r] - y'[:r])^*\lambda
+L(x', \lambda) = \frac{1}{2} \Vert z'-x' \Vert_2^2 + (S_rx'[:r] - y'[:r])^*\lambda
 $$
 
 We get the fixed coordinates in the affine space:
@@ -91,3 +79,17 @@ Transforming back to the original space:
 $$
 x = V \{ S_r^{-1} y'[:r] \ (V^*z)[r:] \}
 $$
+
+
+# Geometric Interpretation
+
+From equation (1), \\(z-x = A^*\lambda\\), that is to say, the line from \\(z\\) to the nearest point \\(x\\) is in the row space (span of rows of \\(A\\)), which is orthogonal to \\(\text{null}(A)\\).
+
+$$
+\begin{align}
+\forall \hat{x} \in C := \{ x | Ax = y \} \\
+\langle z-x, x - \hat{x} \rangle = 0
+\end{align}
+$$
+
+See [Row and Column Spaces]("https://en.wikipedia.org/wiki/Row_and_column_spaces) on Wikipedia for more details.
