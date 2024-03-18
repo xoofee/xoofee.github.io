@@ -1,7 +1,7 @@
 ---
-title: 'L1 optimization phase transition [python]'
+title: 'L1 optimization by projected subgradient phase transition [python]'
 date: 2024-03-14
-permalink: /posts/2024/03/l1-optimzation_phase_transition
+permalink: /posts/2024/03/l1-optimzation_by_projected_subgradient
 categories: math
 ---
 
@@ -100,5 +100,5 @@ plt.figure(); plt.plot(sparsities, success_rates, '.-'); plt.xlabel('sparsity');
 
 # result
 
-![L0 phase transition curve](/images/blogs/2024/03/l0-optimzation_phase_transition/transition.png)
+![L1 phase transition curve](/images/blogs/2024/03/l1-optimzation_by_projected_subgradient/transition.png)
 
