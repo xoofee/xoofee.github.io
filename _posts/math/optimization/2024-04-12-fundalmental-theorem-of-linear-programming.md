@@ -60,7 +60,7 @@ This is an interpretation in 3D, in high dimensional space the author does not u
 
 # Another proof of T2
 
-if z minimize  \\(c^T x = l\\) in feasible set F, we can form 
+if z minimize  \\(c^T x \\) in feasible set F and the minimum is \\(l\\), we can form 
 
 $$
 \begin{bmatrix}
