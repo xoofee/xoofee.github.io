@@ -1,11 +1,13 @@
 ---
-title: 'argmax to multinomial, certainty to diversity'
+title: 'argmax to multinomial'
 date: 2024-05-22
 permalink: /posts/2024/05/argmax_to_multinomial
 categories: ai
 ---
 
-Why use a multinomial function to get the next word prediction in a GPT model rather than outputting the id with the largest probability?
+Why use a multinomial function to get the next word prediction in a GPT (generative) model rather than outputting the id with the largest probability?
+
+(Here we talk about generation, not training)
 
 
 # Answer (GPT-4o)
