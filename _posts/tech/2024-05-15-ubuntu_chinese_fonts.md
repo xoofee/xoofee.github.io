@@ -1,7 +1,7 @@
 ---
 title: '解决Ubuntu中文字体缺失，中文文档丑'
 date: 2024-05-15
-permalink: /posts/2024/03/ubuntu_chinese_fonts
+permalink: /posts/2024/05/ubuntu_chinese_fonts
 categories: tech
 ---
 
