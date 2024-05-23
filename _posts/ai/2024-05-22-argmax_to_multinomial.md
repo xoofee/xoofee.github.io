@@ -2,7 +2,7 @@
 title: 'argmax to multinomial'
 date: 2024-05-22
 permalink: /posts/2024/05/argmax_to_multinomial
-categories: ai
+categories: chatgpt
 ---
 
 Why use a multinomial function to get the next word prediction in a GPT (generative) model rather than outputting the id with the largest probability?
