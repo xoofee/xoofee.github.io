@@ -1,11 +1,12 @@
 ---
-title: 'ChatGPT answers'
+title: 'GPT Chats'
 date: 2024-05-23
 permalink: /posts/2024/05/chat_gpt_answers
 categories: chatgpt
 ---
 
 Some chats from ChatGPT
+* TOC
 {:toc}
 
 
@@ -24,7 +25,7 @@ Some chats from ChatGPT
 - **Description**: Using a universal system of symbols or mathematical constructs to convey precise information.
 - **Advantages**: High precision, unambiguity, and potentially universal understanding among beings with a shared knowledge base.
 - **Feasibility**: Practical for specific contexts, such as scientific and technical communication, but may lack expressiveness for conveying emotions or abstract concepts.
-- 
+
 {:.no_toc}
 ## 3. Digital Communication
 - **Description**: Direct exchange of data or information encoded in a digital format, potentially including binary code or other digital protocols.
@@ -93,9 +94,9 @@ Consider the sentence "The cat sat on the mat":
 3. **Lack of Order Information**: Without positional embeddings, these vectors are just a set of vectors with no inherent order. The transformer processes them in parallel, so it has no way of knowing that "The" comes before "cat" or "sat".
 
 4. **Adding Positional Embeddings**: To encode the order, we add positional embeddings to each token embedding. If `P_i` is the positional embedding for position `i`:
-   \[
-   [E_The + P_0, E_cat + P_1, E_sat + P_2, E_on + P_3, E_the + P_4, E_mat + P_5]
-   \]
+
+   $$ [E_{The} + P_0, E_{cat} + P_1, E_{sat} + P_2, E_{on} + P_3, E_{the} + P_4, E_{mat} + P_5] $$
+   
    Now, each token embedding carries information about its position in the sequence.
 
 {:.no_toc}
