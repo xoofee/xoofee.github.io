@@ -101,7 +101,7 @@ sudo cp /work/temp/arm_humble/usr/lib/aarch64-linux-gnu/libpython3.10.so /usr/li
 MAKEFLAGS=-j13 colcon build --cmake-args -DCMAKE_TOOLCHAIN_FILE=`pwd`/aarch64-linux-gnu.toolchain.cmake --packages-up-to all_in_ncu_launch 
 
 # cmake
-cmake .. -DCMAKE_TOOLCHAIN_FILE=`pwd`/aarch64-linux-gnu.toolchain.cmake
+cmake .. -DCMAKE_TOOLCHAIN_FILE=`pwd`/aarch64-linux-gnu.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 ```
 
 # 9. FAQ
