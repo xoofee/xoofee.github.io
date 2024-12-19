@@ -17,13 +17,19 @@ sudo apt install g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
 # 2. 配置qemu（仅需执行一次）
 ```bash
-sudo apt-get install qemu binfmt-support qemu-user-static # necessary?
+# 如果apt安装qemu有问题，可只安装后两个
+sudo apt-get install qemu binfmt-support qemu-user-static
+
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+# 可能某些情况下需要：
+sudo update-binfmts --enable qemu-aarch64
+sudo dpkg --add-architecture arm64
 ```
 
 # 3. 下载并运行ros arm容器
 ```bash
 sudo docker pull arm64v8/ros:humble
+# 如拉取失败可以尝试增加platform参数 sudo docker pull --platform linux/arm64 arm64v8/ubuntu:24.04
 sudo docker run -itd --privileged=true --net=host -v /work:/work --name arm_humble arm64v8/ros:humble bash
 
 # 配置时区(可选)
