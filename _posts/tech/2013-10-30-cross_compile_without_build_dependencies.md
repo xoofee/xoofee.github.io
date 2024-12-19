@@ -86,7 +86,7 @@ sudo tar xfv arm_humble.tar -C /work/temp/arm_humble/
     set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 ```
 
-# 7. 拷贝创建python3.10
+# 7. 拷贝创建python3.10 (如果工程需要Python,如ROS)
 
 ```bash
 sudo cp /work/temp/arm_humble/usr/lib/aarch64-linux-gnu/libpython3.10.so /usr/lib/aarch64-linux-gnu/libpython3.10.so
@@ -97,7 +97,11 @@ sudo cp /work/temp/arm_humble/usr/lib/aarch64-linux-gnu/libpython3.10.so /usr/li
 # 8. 编译时指定toolchain
 
 ```bash
+# colcon
 MAKEFLAGS=-j13 colcon build --cmake-args -DCMAKE_TOOLCHAIN_FILE=`pwd`/aarch64-linux-gnu.toolchain.cmake --packages-up-to all_in_ncu_launch 
+
+# cmake
+cmake .. -DCMAKE_TOOLCHAIN_FILE=`pwd`/aarch64-linux-gnu.toolchain.cmake
 ```
 
 # 9. FAQ
