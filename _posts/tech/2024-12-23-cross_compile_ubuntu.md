@@ -7,7 +7,7 @@ categories: tech
 
 Install arm64 package directly in x86 ubuntu for cross compile.
 
-this is a replacement for https://xoofee.github.io/posts/2023/10/cross_compile_without_build_dependencies
+this is a replacement for [cross_compile_without_build_dependencies](https://xoofee.github.io/posts/2023/10/cross_compile_without_build_dependencies)
 
 * TOC
 {:toc}
