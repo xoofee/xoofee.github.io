@@ -1,11 +1,11 @@
 ---
-title: 'ros2/arm免依赖交叉编译教程'
+title: 'install arm64 package in x86 ubuntu for cross compile'
 date: 2024-12-23
-permalink: /posts/2024/12/cross_compile_in_ubuntu
+permalink: /posts/2024/12/install_arm64_package_in_x86_ubuntu_for_cross_compile/ 
 categories: tech
 ---
 
-install arm64 package directly in x86_64 ubuntu
+Install arm64 package directly in x86 ubuntu for cross compile.
 
 this is a replacement for https://xoofee.github.io/posts/2023/10/cross_compile_without_build_dependencies
 
