@@ -7,6 +7,8 @@ categories: tech
 
 使用qemu运行arm docker模拟器，在模拟器中使用apt安装依赖后，将docker容器文件系统导出，作为cmake的sysroot，避免编译依赖。本文以ROS2为例，但方法并不限于ROS2
 
+这个办法已过时，请参阅新方法：https://xoofee.github.io/posts/2024/12/cross_compile_in_ubuntu 
+
 * TOC
 {:toc}
 
