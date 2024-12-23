@@ -53,6 +53,17 @@ Architectures: arm64
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 ```
 
+you could check to see that the arm64 package is available in the website: http://mirrors.aliyun.com/ubuntu-ports/dists/noble/
+```
+Parent directory/	-	-
+Contents-arm64.gz	48.8 MB	2024-04-24 14:39
+Contents-armhf.gz	45.3 MB	2024-04-24 17:53
+Contents-ppc64el.gz	46.8 MB	2024-04-24 19:50
+Contents-riscv64.gz	45.4 MB	2024-04-24 21:09
+Contents-s390x.gz	45.4 MB	2024-04-24 22:24
+```
+
+
 # 2. add arm64 architecture for apt
 ```bash
 sudo dpkg --add-architecture arm64
