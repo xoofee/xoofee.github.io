@@ -77,7 +77,20 @@ sudo apt install libncurses-dev:arm64
 ```
 this will install to /usr/aarch64-linux-gnu
 
-# 4. compile nano
+# 4. compile
+
+aarch64 gcc install
+```bash
+sudo apt install g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
+```
+
+## 4.1 cmake
+
+```bash
+cmake -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ ..
+```
+
+## 4.2 make
 ```bash
 wget https://www.nano-editor.org/dist/v6/nano-6.2.tar.xz
 tar zxvf nano-6.2.tar.xz
