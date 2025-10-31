@@ -10,9 +10,9 @@ When first exploring LinuxCNC's codebase, something curious stands out: drivers 
 * TOC
 {:toc}
 
-# 
+# summary
 
- “The HAL is not necessarily a module — it’s a boundary of responsibility between hardware-dependent and hardware-independent code.”
+“The HAL is not necessarily a module — it’s a boundary of responsibility between hardware-dependent and hardware-independent code.”
 
 In other words:
 even if you don’t call it HAL, every robust system has a HAL-shaped interface somewhere.
