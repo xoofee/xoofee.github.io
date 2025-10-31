@@ -3,20 +3,17 @@ title: 'Why LinuxCNC Drivers Are HAL Components: Understanding a Domain-Specific
 date: 2025-10-31
 permalink: /posts/2025/10/linuxcnc-hal-design/
 categories: tech
-tags: ['linuxcnc']
+tags: [linuxcnc]
 ---
 
-When first exploring LinuxCNC's codebase, something curious stands out: drivers are located in src/hal/drivers/. This seems backwards at first—in traditional operating systems, drivers sit below the Hardware Abstraction Layer (HAL), not inside it. But this apparent inversion reveals a fundamental difference in how LinuxCNC approaches system architecture compared to general-purpose operating systems.
+The HAL is not necessarily a module — it’s a boundary of responsibility between hardware-dependent and hardware-independent code.
 
 * TOC
 {:toc}
 
 # summary
 
-“The HAL is not necessarily a module — it’s a boundary of responsibility between hardware-dependent and hardware-independent code.”
-
-In other words:
-even if you don’t call it HAL, every robust system has a HAL-shaped interface somewhere.
+When first exploring LinuxCNC's codebase, something curious stands out: drivers are located in src/hal/drivers/. This seems backwards at first—in traditional operating systems, drivers sit below the Hardware Abstraction Layer (HAL), not inside it. But this apparent inversion reveals a fundamental difference in how LinuxCNC approaches system architecture compared to general-purpose operating systems.
 
 ## Two Different Models
 
