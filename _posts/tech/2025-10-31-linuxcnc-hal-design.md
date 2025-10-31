@@ -113,6 +113,31 @@ Could LinuxCNC use a more traditional design? Possibly, but it would require:
 
 For a real-time CNC system, this would add complexity and latency without providing meaningful benefits. The current design makes sense for the domain.
 
+## Difference with General-purpose OS
+
+General-purpose OS:
+- Many applications must run
+- Hardware must be abstracted for portability
+- Security/sandboxing requires boundaries
+- Layered architecture fits
+
+Domain-specific control systems (LinuxCNC, ROS, PLCs):
+- Single-purpose: control a machine
+- Real-time constraints: minimal layers/overhead
+- User configurability: operators wire components
+- Tight coupling is acceptable
+
+LinuxCNC’s style is common in:
+- Real-time control systems
+- Robotics frameworks
+- Industrial automation
+- Embedded motion control
+
+It’s uncommon in:
+- General-purpose operating systems
+- Multi-application platforms
+- Systems needing strong hardware abstraction
+
 ## Conclusion
 
 LinuxCNC's architecture challenges our assumptions about how operating systems should be structured. By making drivers first-class HAL components rather than a separate layer below the HAL, LinuxCNC prioritizes:
