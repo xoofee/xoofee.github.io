@@ -211,7 +211,7 @@ services:
 
 1. **Profiles**: Separate `dev` and `release` profiles for different use cases
 2. **Host network mode**: Direct access to ports on the host
-3. **Volume mounts**: Mounts `/nfs`, `/media`, and `/work` directories
+3. **Volume mounts**: Mounts `/work` directories
 4. **Shared memory**: 2GB `shm_size` for applications that need it (e.g., R)
 5. **TTY**: Interactive terminal support
 
@@ -248,22 +248,8 @@ The password is configured in the Dockerfile (you'll need to set your own hash f
 ### Access Container Shell
 
 ```bash
-# Development container
-sudo docker exec -it bio-dev bash
-
-# Release container
 sudo docker exec -it bio-release bash
 ```
-
-## Build Arguments
-
-When building, you can customize the user:
-
-```bash
-docker build --build-arg UID=$(id -u) --build-arg GID=$(id -g) --build-arg USERNAME=biouser -t ubuntu-nonroot .
-```
-
-This ensures the container user matches your host user ID/GID for seamless file permissions.
 
 ## Configuration Notes
 
