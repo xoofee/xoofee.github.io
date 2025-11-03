@@ -1,7 +1,7 @@
 ---
 title: "Building a Bioinformatics Docker Environment with Python, R, and Jupyter Lab"
-date: 2025-12-20
-permalink: /posts/2025/12/bioinformatics-docker-environment/
+date: 2025-11-02
+permalink: /posts/2025/11/bioinformatics-docker-environment/
 categories: tech
 tags: [docker, bioinformatics, python, r, jupyter, seurat, containerization]
 excerpt: "A comprehensive Docker setup for bioinformatics work, featuring non-root user configuration, Python virtual environments, R with Seurat, and Jupyter Lab with multi-profile docker-compose support."
