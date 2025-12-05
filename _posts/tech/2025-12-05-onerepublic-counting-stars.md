@@ -118,6 +118,7 @@ It's one of the rare music videos where the visuals perfectly match and even dee
 
 ## Lyrics
 
+```
 Lately, I been, I been losin' sleep
 Dreamin' about the things that we could be
 But baby, I been, I been prayin' hard
@@ -202,3 +203,4 @@ Take that money, watch it burn (ooh)
 Sink in the river the lessons I learned (ooh)
 Take that money, watch it burn (ooh)
 Sink in the river the lessons I learned
+```
