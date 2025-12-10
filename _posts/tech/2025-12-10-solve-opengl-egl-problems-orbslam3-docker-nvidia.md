@@ -12,13 +12,18 @@ Running ORB-SLAM3 (or other OpenGL-based computer vision applications) in Docker
 * TOC
 {:toc}
 
-## Overview
+## Problem
 
 ORB-SLAM3 requires OpenGL/EGL for visualization and rendering. When containerized, I got these issues:
 
 ```
 MESA: error: ZINK: failed to choose pdev libEGL warning: egl: failed to create dri2 screen QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-xf' Starting the Viewer MESA: error: Failed to attach to x11 shm
 ```
+
+## Causation (for me)
+
+1. NVIDIA_DRIVER_CAPABILITIES not correctly set
+2. not using nvidia/opengl:1.0-glvnd-devel
 
 ## Prerequisites
 
@@ -279,196 +284,6 @@ This result in ORB-SLAM3 Map Viewer problem
 
 
 
-
-
-
-
-### Base Dockerfile Structure
-
-```dockerfile
-FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
-
-# Install OpenGL and EGL libraries
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libgl1-mesa-dri \
-    libegl1-mesa \
-    libgles2-mesa \
-    libglu1-mesa \
-    libx11-dev \
-    libxext-dev \
-    libxrender-dev \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install ORB-SLAM3 dependencies
-RUN apt-get update && apt-get install -y \
-    cmake \
-    git \
-    libeigen3-dev \
-    libopencv-dev \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build ORB-SLAM3
-WORKDIR /workspace
-RUN git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git
-WORKDIR /workspace/ORB_SLAM3
-RUN chmod +x build.sh && ./build.sh
-
-# Set environment variables for EGL
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility
-ENV __GLX_VENDOR_LIBRARY_NAME=nvidia
-ENV EGL_PLATFORM=device
-```
-
-## Solution 3: EGL Device Platform Configuration
-
-### For Headless Rendering (No X11)
-
-When running without a display, use EGL device platform:
-
-```dockerfile
-# In Dockerfile, add:
-ENV EGL_PLATFORM=device
-ENV __EGL_VENDOR_LIBRARY_FILENAMES=/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0
-```
-
-### Runtime Environment Variables
-
-```bash
-docker run --gpus all \
-  -e NVIDIA_VISIBLE_DEVICES=all \
-  -e NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility \
-  -e EGL_PLATFORM=device \
-  -e __EGL_VENDOR_LIBRARY_FILENAMES=/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0 \
-  your-image
-```
-
-## Solution 4: Docker Compose Configuration
-
-```yaml
-version: "3.9"
-
-services:
-  orbslam3:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: orbslam3:latest
-    container_name: orbslam3-container
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility
-      - EGL_PLATFORM=device
-      - DISPLAY=${DISPLAY}
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./data:/workspace/data
-    devices:
-      - /dev/dri:/dev/dri
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-```
-
-## Solution 5: Common Error Fixes
-
-### Error: "EGL: Failed to create display"
-
-**Solution**: Ensure NVIDIA drivers are properly exposed:
-
-```bash
-docker run --gpus all \
-  --device=/dev/dri \
-  -e NVIDIA_VISIBLE_DEVICES=all \
-  -e NVIDIA_DRIVER_CAPABILITIES=graphics \
-  your-image
-```
-
-### Error: "libEGL.so.1: cannot open shared object file"
-
-**Solution**: Install EGL libraries and link NVIDIA's EGL:
-
-```dockerfile
-RUN apt-get install -y libegl1 libegl1-mesa libegl-nvidia0
-```
-
-### Error: "No available GPUs" or "CUDA not found"
-
-**Solution**: Verify GPU access:
-
-```bash
-# Test GPU visibility in container
-docker run --gpus all --rm nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
-```
-
-### Error: "X11 display not found" (for GUI applications)
-
-**Solution**: Forward X11 display or use headless rendering:
-
-```bash
-# Option 1: X11 forwarding
-xhost +local:docker
-docker run -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix your-image
-
-# Option 2: Headless with EGL device platform
-docker run -e EGL_PLATFORM=device your-image
-```
-
-## Solution 6: Verify EGL Setup
-
-### Test EGL in Container
-
-Create a test script to verify EGL initialization:
-
-```cpp
-// test_egl.cpp
-#include <EGL/egl.h>
-#include <iostream>
-
-int main() {
-    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (display == EGL_NO_DISPLAY) {
-        std::cerr << "Failed to get EGL display" << std::endl;
-        return 1;
-    }
-    
-    EGLint major, minor;
-    if (!eglInitialize(display, &major, &minor)) {
-        std::cerr << "Failed to initialize EGL" << std::endl;
-        return 1;
-    }
-    
-    std::cout << "EGL initialized successfully" << std::endl;
-    std::cout << "EGL version: " << major << "." << minor << std::endl;
-    
-    eglTerminate(display);
-    return 0;
-}
-```
-
-Compile and run:
-
-```bash
-g++ -o test_egl test_egl.cpp -lEGL
-./test_egl
-```
-
-## Best Practices
-
-1. **Always use `--gpus all`** or `runtime: nvidia` for GPU access
-2. **Set `NVIDIA_DRIVER_CAPABILITIES`** to include `graphics` for OpenGL/EGL
-3. **Use EGL device platform** for headless rendering when possible
-4. **Mount `/dev/dri`** device for direct rendering infrastructure access
-5. **Verify GPU visibility** with `nvidia-smi` inside container before debugging OpenGL issues
-
 ## Troubleshooting Checklist
 
 - [ ] NVIDIA Container Toolkit installed and Docker restarted
@@ -495,7 +310,7 @@ Following these solutions should resolve most OpenGL/EGL initialization problems
 
 - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)
 - [ORB-SLAM3 GitHub Repository](https://github.com/UZ-SLAMLab/ORB_SLAM3)
-- [EGL Specification](https://www.khronos.org/egl/)
+
 
 ## some notes
 
@@ -598,3 +413,37 @@ same effect as
 ```
 
 so choose any one is ok
+
+
+### note4: OpenGL, 
+
+
+```
+                ┌───────────────────┐
+                │       Your App    │
+                └──────────┬────────┘
+                           │
+           OpenGL API Calls│
+───────────────────────────▼────────────────────────
+                ┌───────────────────┐
+                │       GLVND       │ (libGL, libEGL, libGLX)
+                └──────────┬────────┘
+                           │dispatch
+───────────────────────────▼────────────────────────
+     ┌──────────────────────────┬─────────────────────────┐
+     │                          │                         │
+┌────▼────┐               ┌─────▼─────┐             ┌────▼─────┐
+│ GLX ICD │               │ EGL ICD   │             │ GL ICD    │
+│ (Nvidia │               │ (Nvidia   │             │ (Nvidia   │
+│ /Mesa)  │               │ /Mesa)    │             │ /Mesa)    │
+└────┬────┘               └─────┬─────┘             └────┬─────┘
+     │                           │                         │
+─────────────── Different mechanisms to create OpenGL context ───────────────
+     │                           │                         │
+┌────▼────┐               ┌──────▼──────┐           ┌──────▼──────┐
+│ X11     │               │ Wayland     │           │ FBDev/DRM    │
+│ Window  │               │ Surface     │           │ (Headless)   │
+└─────────┘               └─────────────┘           └──────────────┘
+
+
+```
