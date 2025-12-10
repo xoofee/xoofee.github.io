@@ -570,6 +570,31 @@ Following these solutions should resolve most OpenGL/EGL initialization problems
       # - /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76:ro
       # - /usr/lib/x86_64-linux-gnu/libnvidia-wayland-client.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-wayland-client.so.550.76:ro
       # - /usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so:/usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so:ro
-            
 
 ```
+
+
+### note 3: docker compose config for nvidia
+
+```
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all          # or count: 3
+              capabilities: [gpu, compute, utility, video, display] 
+
+
+```
+
+same effect as
+
+```
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+    runtime: nvidia
+```
+
+so choose any one is ok
