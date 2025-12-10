@@ -7,7 +7,7 @@ tags: [opengl, egl, orbslam3, docker, nvidia, gpu, containerization, computer-vi
 excerpt: "A guide to resolving OpenGL/EGL initialization and rendering issues when running ORB-SLAM3 in Docker containers on hosts with NVIDIA GPUs, covering proper GPU passthrough, EGL context setup, and common pitfalls."
 ---
 
-Running ORB-SLAM3 (or other OpenGL-based computer vision applications) in Docker containers can be challenging, especially when dealing with GPU acceleration and EGL context initialization. This post documents solutions for common OpenGL/EGL problems encountered when running ORB-SLAM3 in Docker on a host with NVIDIA GPU.
+Running ORB-SLAM3 (or other OpenGL-based computer vision applications) in Docker containers can be challenging, especially when dealing with GPU acceleration and EGL context initialization. This post documents problems and solutions encountered when running ORB-SLAM3 in Docker on a host with NVIDIA GPU.
 
 * TOC
 {:toc}
@@ -24,12 +24,10 @@ MESA: error: ZINK: failed to choose pdev libEGL warning: egl: failed to create d
 
 - Host system with NVIDIA GPU
 - NVIDIA drivers installed on host
-- Docker with NVIDIA Container Toolkit (nvidia-docker2)
+- Docker with NVIDIA Container Toolkit (nvidia-container-toolkit)
 - ORB-SLAM3 source code or pre-built binaries
 
-## Solution 1: Proper NVIDIA Container Runtime Setup
-
-### Install NVIDIA Container Toolkit
+### install NVIDIA Container Toolkit
 
 ```bash
 # Add NVIDIA package repositories
@@ -45,9 +43,9 @@ sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
 ```
 
-### Docker Run Command with GPU Access
+## the problem
 
-OK, let's start a container
+### 1 start a container
 
 ```bash
 xhost +local:
@@ -72,7 +70,11 @@ root@cf20e34c36e2:/# nvidia-smi
 +-----------------------------------------+------------------------+----------------------+
 ```
 
-GOOD! nvidia driver is ok in container. Let's see if opengl programs runs normals. We use glxgears and glmark2. first install packages for them
+GOOD! nvidia driver is ok in container.
+
+### 2 test opengl programs
+
+ Let's see if opengl programs runs normals. We use glxgears and glmark2. first install packages for them
 
 ```
 # in container
@@ -81,7 +83,7 @@ sed -i 's|archive.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.li
     && sed -i 's|security.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
 apt update
 
-sudo apt install mesa-utils glmark2
+apt install -y mesa-utils glmark2
 ```
 
 Run it
@@ -107,6 +109,8 @@ root@cf20e34c36e2:/x/temp# glmark2
 
 Wait, they are running on llvmpipe, no hardware acceleration/GPU !!!
 
+### 3 check OpenGL state
+
 ```
 # glxinfo -B
 OpenGL renderer string: llvmpipe (LLVM 15.0.7, 256 bits)
@@ -116,9 +120,72 @@ X11 platform:
 EGL vendor string: Mesa Project
 ```
 
+If glxinfo and eglinfo does not show NVIDIA, the ORB-SLAM3 cannot show its map using OPENGL/EGL
+
+### 4 GL problem in ORB-SLAM3
+
+Run a sample of ORB-SLAM3 (after installing all the dependencies and building)
+
+```bash
+./Examples/Monocular-Inertial/mono_inertial_tum_vi \
+    Vocabulary/ORBvoc.txt \
+    Examples/Monocular-Inertial/TUM-VI.yaml \
+    /dataset/tum/tumvi/exported/euroc/512_16/dataset-room1_512_16/mav0/cam0/data \
+    Examples/Monocular-Inertial/TUM_TimeStamps/dataset-room1_512.txt \
+    Examples/Monocular-Inertial/TUM_IMU/dataset-room1_512.txt
+```
+
+the ORB feature points images shows, but the MapViewer is black, and continues to print
+
+MESA: error: Failed to attach to x11 shm
+
+## Try 1: use nvidia/opengl
+
+```bash
+docker run --rm -it --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
+```
+
+glxgears cannot render, glmark2 crash
+
+## Try 2:
 
 
-## Solution 2: Dockerfile Configuration
+```bash
+docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -e NVIDIA_VISIBLE_DEVICES=all -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
+```
+
+```
+glmark2
+=======================================================
+    glmark2 2021.02
+=======================================================
+    OpenGL Information
+    GL_VENDOR:     NVIDIA Corporation
+    GL_RENDERER:   NVIDIA GeForce GTX 1080 Ti/PCIe/SSE2
+    GL_VERSION:    4.6.0 NVIDIA 550.76
+=======================================================
+[build] use-vbo=false: FPS: 9481 FrameTime: 0.105 ms
+[build] use-vbo=true: FPS: 20894 FrameTime: 0.048 ms
+=======================================================
+                                  glmark2 Score: 15187 
+```
+
+GOOD: FPS much larger (than 560 with llvmpipe)
+
+```
+glxinfo -B
+name of display: :1
+display: :1  screen: 0
+direct rendering: Yes
+Memory info (GL_NVX_gpu_memory_info):
+    Dedicated video memory: 11264 MB
+    Total available memory: 11264 MB
+    Currently available dedicated video memory: 10808 MB
+OpenGL vendor string: NVIDIA Corporation
+```
+
+eglinfo -B
+EGL vendor string: NVIDIA
 
 ### Base Dockerfile Structure
 
