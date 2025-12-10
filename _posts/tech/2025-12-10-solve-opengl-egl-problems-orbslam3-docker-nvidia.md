@@ -74,6 +74,8 @@ Perhaps someone could extract this JSON file to work with non-nvidia/opengl imag
 
 ## How to Verify Your Container Will Work: Check Vendor String Shows NVIDIA
 
+You should not see mesa or llvmpipe in vendor string
+
 ### EGL (Used by ORB-SLAM3 Map Viewer)
 
 EGL is used by Wayland:
@@ -92,7 +94,7 @@ OpenGL vendor string: NVIDIA Corporation
 
 **Note:** Gazebo Classic can only use GLX. Ignition Gazebo uses GLX in traditional X11 mode while EGL in Wayland mode.
 
-## Detailed Steps
+## Detailed Records
 
 ### 0. Prerequisites
 
@@ -239,7 +241,9 @@ MESA: error: Failed to attach to x11 shm
 /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76
 ```
 
-## Try 1: Use nvidia/opengl Base Image
+These files are injected by setting `--gpus all`, with out `NVIDIA_DRIVER_CAPABILITIES=all`,  some critical nvidia .so files are still missing
+
+### Try 1: Use nvidia/opengl Base Image
 
 ```bash
 docker run --rm -it --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
@@ -247,7 +251,7 @@ docker run --rm -it --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix nvidi
 
 Result: `glxgears` cannot render, `glmark2` crashes.
 
-## Try 2 (Final Solution): Add NVIDIA_DRIVER_CAPABILITIES
+### Try 2 (Final Solution): Add NVIDIA_DRIVER_CAPABILITIES
 
 ```bash
 docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
@@ -336,7 +340,7 @@ EGL vendor string: NVIDIA
 
 So, `NVIDIA_DRIVER_CAPABILITIES` has a critical effect on which .so files are mounted. Important files like `libnvidia-gpucomp.so.550.76` are not mounted without `NVIDIA_DRIVER_CAPABILITIES`.
 
-## Test: What If Using ubuntu:22.04 + NVIDIA_DRIVER_CAPABILITIES
+### Test: What If Using ubuntu:22.04 + NVIDIA_DRIVER_CAPABILITIES
 
 ```bash
 docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /tmp/.X11-unix:/tmp/.X11-unix ubuntu:22.04 bash
@@ -345,16 +349,6 @@ docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /
 **Result:** `glxinfo` and `glmark2` work correctly (with hardware rendering), but `eglinfo` still shows Mesa (not NVIDIA).
 
 This results in ORB-SLAM3 Map Viewer problems.
-
-## Troubleshooting Checklist
-
-- [ ] NVIDIA Container Toolkit installed and Docker restarted
-- [ ] `nvidia-smi` works inside container
-- [ ] EGL libraries installed (`libegl1`, `libegl-nvidia0`)
-- [ ] Environment variables set (`NVIDIA_VISIBLE_DEVICES`, `NVIDIA_DRIVER_CAPABILITIES`)
-- [ ] `/dev/dri` devices accessible in container (only for integrated graphics, not NVIDIA)
-- [ ] EGL platform set correctly (`EGL_PLATFORM=device` for headless)
-- [ ] X11 forwarding configured if GUI needed
 
 ## Summary
 
@@ -429,3 +423,158 @@ The NVIDIA Container Toolkit automatically handles mounting the necessary NVIDIA
 │ Window  │               │ Surface     │           │ (Headless)   │
 └─────────┘               └─────────────┘           └──────────────┘
 ```
+
+### Note 4: Autoware ADE Development Environment may help
+
+Some engineers like ADE to manage the container. But I havn't tried yet.
+
+https://gitlab.com/ApexAI/ade-cli
+
+
+### files for docker compose
+
+#### Dockerfile
+
+```
+# docker build --build-arg UID=$(id -u) --build-arg GID=$(id -g) --build-arg USERNAME=cw -t ubuntu-nonroot .
+
+# Install common packages
+# Replace Ubuntu mirrors with Tsinghua
+
+# FROM ubuntu:25.04
+# RUN sed -i 's|archive.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/ubuntu.sources \
+#     && sed -i 's|security.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/ubuntu.sources \
+#     && apt update
+
+
+    
+# ubuntu:jammy (22.04): /etc/apt/sources.list
+
+# FROM ubuntu:22.04
+FROM nvidia/opengl:1.0-glvnd-devel
+RUN sed -i 's|archive.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
+    && sed -i 's|security.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
+    && apt update
+
+# passwd is for delluser and delgroup
+RUN apt install -y sudo adduser
+
+# Create a non-root user
+ARG USERNAME=xf
+ARG UID=1000
+ARG GID=1000
+
+# --remove-home ubuntu requires perl, so skip
+RUN deluser ubuntu || true \
+    && delgroup ubuntu || true \
+    && groupadd -g 1000 $USERNAME \
+    && useradd -m -u 1000 -g $USERNAME -s /bin/bash $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# RUN groupadd -g $GID $USERNAME \
+#     && useradd -m -u $UID -g $USERNAME -s /bin/bash $USERNAME \
+#     && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to the new user
+USER $USERNAME
+WORKDIR /home/$USERNAME
+ENV HOME=/home/$USERNAME
+
+# need relogin and apt update to populate the database
+RUN sudo apt install -y command-not-found
+RUN sudo apt update
+
+# to avoid tzdata require input in the following apt installation
+ENV TZ=Asia/Shanghai
+RUN sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ | sudo tee /etc/timezone
+
+RUN sudo apt install -y nano vim build-essential cmake git
+
+# ------------------------------------------------------------------- python
+RUN sudo apt install -y python3 python3-pip python3-virtualenv python3-dev
+
+# RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# pip install some binaries to .local/bin folder
+ENV PATH=$HOME/pyenvs/ai/bin:$HOME/.local/bin:$PATH
+
+ENV AIPY=$HOME/pyenvs/ai
+RUN virtualenv $AIPY
+RUN echo "source $HOME/pyenvs/ai/bin/activate" >> $HOME/.bashrc
+
+RUN $AIPY/bin/python -m pip install --upgrade pip
+RUN $AIPY/bin/python -m pip install setuptools wheel
+
+# RUN sudo apt update
+RUN sudo apt install -y libopencv-dev libopencv-contrib-dev libeigen3-dev libboost-all-dev
+
+# to run GUI applications
+RUN sudo apt install -y \
+    libx11-dev libxext6 libxrender1 libxtst6 libxi6 \
+    libgl1 libglx-mesa0 mesa-utils \
+    libgl1-mesa-dri libglu1-mesa \
+    libglfw3-dev libglew-dev \
+    libxrandr-dev libxinerama-dev libxcursor-dev \
+    x11-xserver-utils x11-utils xauth
+
+# run glxgears to check is opengl is ok inside docker
+
+# Keep container alive for background dev
+CMD ["sleep", "infinity"]
+
+
+```
+
+
+#### docker-compose.yml
+
+```
+services:
+
+  # =========================================================
+  # Release profile: use prebuilt stable image
+  # =========================================================
+  cvrelease:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        USERNAME: xf  
+    hostname: docker-cv
+    profiles: ["release"]
+    restart: unless-stopped
+    extra_hosts:
+      - "docker-cv:127.0.0.1"
+    volumes:
+      - /x:/x
+      - /data:/data
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+
+    working_dir: /x
+    tty: true
+    network_mode: host
+    shm_size: "2g"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, video, display] 
+
+```
+
+#### start command
+
+```
+xhost +local:
+sudo -E docker compose --profile release up -d
+```
+
+The `xhost +local:` could be ran after the container startup
