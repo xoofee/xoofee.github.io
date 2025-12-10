@@ -20,19 +20,87 @@ ORB-SLAM3 requires OpenGL/EGL for visualization and rendering. When containerize
 MESA: error: ZINK: failed to choose pdev libEGL warning: egl: failed to create dri2 screen QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-xf' Starting the Viewer MESA: error: Failed to attach to x11 shm
 ```
 
-## Causation (for me)
+## Causation and Solution (for me)
 
-1. NVIDIA_DRIVER_CAPABILITIES not correctly set
+NVIDIA_DRIVER_CAPABILITIES and base docker images are the two reason for my problem
+
+### 1 NVIDIA_DRIVER_CAPABILITIES not correctly set
+after this set correctly, glx problems are resolved (GLX works with NVIDIA GPU acceleration). But EGL do not work, so as the ORB-SLAM3's Map Viewer which depend on EGL (not on GLX)
+
+#### docker compose 
+
+(recommend)
+
+```
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, video, display] 
+              # capabilities: [gpu, compute, utility] is not enough!!!
+
+```
+
+alternative: 
+
+```
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+    runtime: nvidia
+```
+
+These two way to inject NVIDIA drivers are equivalent
+
+#### docker run
+
+```bash
+docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
+```
+
 2. not using nvidia/opengl:1.0-glvnd-devel
 
-## Prerequisites
+I do not understand why use this base image is ok for EGL. I see 
+
+```
+COPY 10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json # buildkit
+```
+in https://hub.docker.com/layers/nvidia/opengl/1.0-glvnd-devel/images/sha256-c030a21588ddb89c245c8a2a24d6e68772cfa5939d312bab19f0833b90e9620a
+
+Maybe some one could extract this json file to work with non nvidia/opengl images like ubuntu 22.04. 
+
+I just use nvidia/opengl:1.0-glvnd-devel
+
+
+## How to check your container will work: vendor string has NVIDIA
+
+### EGL (depended by OSB-SLAM3 Map Viewer) used by wayland
+```
+eglinfo -B
+EGL vendor string: NVIDIA
+```
+
+### GLX (for X11)
+```
+glxinfo -B
+OpenGL vendor string: NVIDIA Corporation
+```
+
+Gazebo Classic could only use GLX
+Ignition Gazebo use GLX in  traditional X11 mode while EGL in Wayland mode
+
+## Detailed Steps
+
+### 0 Prerequisites
 
 - Host system with NVIDIA GPU
 - NVIDIA drivers installed on host
 - Docker with NVIDIA Container Toolkit (nvidia-container-toolkit)
 - ORB-SLAM3 source code or pre-built binaries
 
-### install NVIDIA Container Toolkit
+#### install NVIDIA Container Toolkit
 
 ```bash
 # Add NVIDIA package repositories
@@ -47,8 +115,6 @@ sudo apt-get install -y nvidia-container-toolkit
 # Restart Docker daemon
 sudo systemctl restart docker
 ```
-
-## the problem
 
 ### 1 start a container
 
@@ -178,7 +244,7 @@ docker run --rm -it --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix nvidi
 
 glxgears cannot render, glmark2 crash
 
-## Try 2: add NVIDIA_DRIVER_CAPABILITIES
+## Try 2 (final): add NVIDIA_DRIVER_CAPABILITIES
 
 
 ```bash
@@ -389,33 +455,17 @@ Following these solutions should resolve most OpenGL/EGL initialization problems
 ```
 
 
-### note 3: docker compose config for nvidia
 
-```
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all          # or count: 3
-              capabilities: [gpu, compute, utility, video, display] 
+### note4: OpenGL, GLVND, GLX/EGL
 
 
-```
+| Component  | Role                                                                           |
+| ---------- | ------------------------------------------------------------------------------ |
+| **OpenGL** | The actual rendering API (glDraw*, etc.).                                      |
+| **GLX**    | X11-specific binding that creates OpenGL contexts and windows.                 |
+| **EGL**    | Cross-platform context/surface creation API for OpenGL, OpenGL ES, and Vulkan. |
+| **GLVND**  | Vendor-neutral dispatcher for OpenGL, GLX, and EGL.                            |
 
-same effect as
-
-```
-    environment:
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - NVIDIA_VISIBLE_DEVICES=all
-    runtime: nvidia
-```
-
-so choose any one is ok
-
-
-### note4: OpenGL, 
 
 
 ```
