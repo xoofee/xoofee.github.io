@@ -139,6 +139,32 @@ the ORB feature points images shows, but the MapViewer is black, and continues t
 
 MESA: error: Failed to attach to x11 shm
 
+### 5 check nvidia .so files
+
+```
+# ls -l /usr/lib/x86_64-linux-gnu/*nvidia* | awk '{print $9, $10, $11}'
+/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0 -> libEGL_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.1 -> libGLESv1_CM_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.2 -> libGLESv2_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0 -> libGLX_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.1 -> libnvidia-cfg.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.1 -> libnvidia-fbc.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1 -> libnvidia-ml.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-rtcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76
+```
+
 ## Try 1: use nvidia/opengl
 
 ```bash
@@ -147,11 +173,11 @@ docker run --rm -it --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix nvidi
 
 glxgears cannot render, glmark2 crash
 
-## Try 2:
+## Try 2: add NVIDIA_DRIVER_CAPABILITIES
 
 
 ```bash
-docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -e NVIDIA_VISIBLE_DEVICES=all -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
+docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /tmp/.X11-unix:/tmp/.X11-unix nvidia/opengl:1.0-glvnd-devel bash
 ```
 
 ```
@@ -186,6 +212,76 @@ OpenGL vendor string: NVIDIA Corporation
 
 eglinfo -B
 EGL vendor string: NVIDIA
+
+### check the nvidia .so files
+
+```
+# ls -l /usr/lib/x86_64-linux-gnu/*nvidia* | awk '{print $9, $10, $11}'
+/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0 -> libEGL_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.1 -> libGLESv1_CM_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.2 -> libGLESv2_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0 -> libGLX_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.1 -> libnvidia-allocator.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.1 -> libnvidia-cfg.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1 -> libnvidia-encode.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.1 -> libnvidia-fbc.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1 -> libnvidia-ml.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.1 -> libnvidia-ngx.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.4 -> libnvidia-nvvm.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.1 -> libnvidia-opencl.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so -> libnvidia-opticalflow.so.1
+/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.1 -> libnvidia-opticalflow.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11-openssl3.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1 -> libnvidia-ptxjitcompiler.so.550.76
+/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-rtcore.so.550.76  
+/usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76  
+/usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so.1 -> libvdpau_nvidia.so.550.76
+/usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so.550.76 
+```
+
+So, the NVIDIA_DRIVER_CAPABILITIES have critical effect on the .so files.
+
+some important files like libnvidia-gpucomp.so.550.76 is not mounted without NVIDIA_DRIVER_CAPABILITIES
+
+## Test: what if ubuntu:22.04 + NVIDIA_DRIVER_CAPABILITIES
+
+```
+docker run --rm -it --gpus all -e DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all -v /tmp/.X11-unix:/tmp/.X11-unix ubuntu:22.04 bash
+```
+
+result: glxinfo and glmark2  ok (with hardware render)
+eglinfo: still Mesa (not NVIDIA)
+
+This result in ORB-SLAM3 Map Viewer problem
+
+
+
+
+
+
+
+
+
 
 ### Base Dockerfile Structure
 
@@ -403,9 +499,77 @@ Following these solutions should resolve most OpenGL/EGL initialization problems
 
 ## some notes
 
-Note:/dev/dri is only for integrated graphics card, not for nvidia:
+### note 1:/dev/dri is only for integrated graphics card, not for nvidia:
 
 ```
 # do not use this with nvidia gpu when running docker
 --device=/dev/dri:/dev/dri \
+```
+
+### note 2: unnecessary manual injection of nvidia drivers
+
+```
+      # for f in /usr/lib/x86_64-linux-gnu/*nvidia*.so*; do
+      #   echo "- $f:$f:ro"
+      # done      
+      # - /usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0:/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0:ro
+      # - /usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.550.76:/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.1:/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.550.76:/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.2:/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.2:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.550.76:/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0:ro
+      # - /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.550.76:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so:/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-api.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-api.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-cfg.so:/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-container-go.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-container-go.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-container-go.so.1.13.5:/usr/lib/x86_64-linux-gnu/libnvidia-container-go.so.1.13.5:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-container.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-container.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-container.so.1.13.5:/usr/lib/x86_64-linux-gnu/libnvidia-container.so.1.13.5:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-egl-gbm.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-egl-gbm.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-egl-gbm.so.1.1.1:/usr/lib/x86_64-linux-gnu/libnvidia-egl-gbm.so.1.1.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-egl-wayland.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-egl-wayland.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-egl-wayland.so.1.1.13:/usr/lib/x86_64-linux-gnu/libnvidia-egl-wayland.so.1.1.13:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-encode.so:/usr/lib/x86_64-linux-gnu/libnvidia-encode.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-encode.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-fbc.so:/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-gtk2.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-gtk2.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-gtk3.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-gtk3.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so:/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.4:/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.4:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so:/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-pkcs11-openssl3.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11-openssl3.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-pkcs11.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-rtcore.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-rtcore.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-tls.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libnvidia-wayland-client.so.550.76:/usr/lib/x86_64-linux-gnu/libnvidia-wayland-client.so.550.76:ro
+      # - /usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so:/usr/lib/x86_64-linux-gnu/libvdpau_nvidia.so:ro
+            
+
 ```
