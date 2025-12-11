@@ -436,9 +436,9 @@ Some engineers like ADE to manage the container. But I havn't tried yet.
 https://gitlab.com/ApexAI/ade-cli
 
 
-### files for docker compose
+## Files for docker compose
 
-#### Dockerfile
+### Dockerfile
 
 ```
 # docker build --build-arg UID=$(id -u) --build-arg GID=$(id -g) --build-arg USERNAME=cw -t ubuntu-nonroot .
@@ -532,7 +532,7 @@ CMD ["sleep", "infinity"]
 ```
 
 
-#### docker-compose.yml
+### docker-compose.yml
 
 ```
 services:
@@ -575,7 +575,7 @@ services:
 
 ```
 
-#### start command
+### start command
 
 ```
 xhost +local:
