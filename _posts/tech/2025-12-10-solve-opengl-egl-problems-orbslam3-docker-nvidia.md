@@ -17,8 +17,13 @@ Running ORB-SLAM3 (or other OpenGL-based computer vision applications) in Docker
 ORB-SLAM3 requires OpenGL/EGL for visualization and rendering. When containerized, I encountered these errors:
 
 ```
-MESA: error: ZINK: failed to choose pdev libEGL warning: egl: failed to create dri2 screen QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-xf' Starting the Viewer MESA: error: Failed to attach to x11 shm
+MESA: error: ZINK: failed to choose pdev
+libEGL warning: egl: failed to create dri2 screen
+MESA: error: Failed to attach to x11 shm
 ```
+
+This error is misleading for beginners — and even for GPT. It often sends people searching for fixes involving `shm`, `dri`, or `pdev`, even though those aren’t actually the cause.
+
 
 ## Root Causes and Solutions
 
