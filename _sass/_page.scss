@@ -49,11 +49,6 @@
 }
 
 .page__content {
-  // Adjust for floating TOC on wide screens
-  @include breakpoint($large) {
-    padding-right: 0;
-    margin-right: 0;
-  }
 
   h2 {
     padding-bottom: 0.5em;
