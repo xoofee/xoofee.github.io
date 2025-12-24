@@ -25,12 +25,11 @@ Libvirt provides a unified API for managing various virtualization technologies,
 ## A script for vm creation
 
 ```bash
-
 #!/usr/bin/env bash
 
 # Sample commands:
 # ./setup_kvm.sh my-vm 16384 8 2048
-# ./setup_kvm.sh my-vm 16384 8 2048 --force  # force to overwrite existing vm files/disk
+# ./setup_kvm.sh my-vm 16384 8 2048 --force
 # ./setup_kvm.sh my-vm 262144 64 4096  # 256GB RAM, 64 vCPUs (268435456 KiB = 262144 MB)
 #
 # Arguments:
@@ -92,8 +91,8 @@ fi
 # -----------------------------
 # CONFIG
 # -----------------------------
-VM_DISK="${VM_NAME}.qcow2"
-CLOUD_IMG="noble-server-cloudimg-amd64.img"
+VM_DISK="/nfs/xf/vms/${VM_NAME}.qcow2"
+CLOUD_IMG="/nfs/xf/tools/noble-server-cloudimg-amd64.img"
 NETWORK="default"
 
 SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"   # industrial standard
@@ -168,12 +167,20 @@ cloud-localds "$SEED_ISO" \
 # -----------------------------
 mkdir -p "$(dirname "$VM_DISK")"
 
+# Create overlay with backing file (for initial setup)
 qemu-img create \
     -f qcow2 \
     -b "$CLOUD_IMG" \
     -F qcow2 \
     "$VM_DISK" \
     "${VM_DISK_SIZE}G"
+
+# Immediately flatten to remove backing file dependency
+# This prevents overlay from growing indefinitely over time
+# (overlays record all blocks that ever differed from base, not just current usage)
+echo "Flattening disk image to remove backing file dependency..."
+qemu-img convert -O qcow2 "$VM_DISK" "${VM_DISK}.flat"
+mv "${VM_DISK}.flat" "$VM_DISK"
 
 # -----------------------------
 # VM CREATE
@@ -203,7 +210,7 @@ echo "  ssh ubuntu@<VM_IP>"
 echo
 echo "Console (debug only):"
 echo "  virsh console $VM_NAME"
-echo "you should wait 3-5 minutes for the VM to set up for the first !!! Otherwise, you cannot access via ssh"
+echo "you should wait 3-5 minutes for the VM to boot up!!! Otherwise, you cannot access via ssh"
 
 
 ```
