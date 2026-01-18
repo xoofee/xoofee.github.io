@@ -7,7 +7,7 @@ tags: [computer-vision, projective-geometry, rectification, homography]
 excerpt: "Why a circle becomes an ellipse after affine distortion, and how that ellipse (or two known length ratios) provides the two constraints needed for metric rectification."
 ---
 
-After **projective** rectification of a plane (removing perspective), we often do **affine** rectification next (recovering parallelism / the vanishing line). But an affinely-rectified plane is still not “Euclidean”: **angles and true length ratios are still wrong** because there is a remaining unknown \\(2\times 2\\) linear distortion.
+An affinely-rectified plane is still not “Euclidean”: **angles and true length ratios are still wrong** because there is a remaining unknown \\(2\times 2\\) linear distortion.
 
 **Metric rectification** is the final upgrade: recover a transform that makes the plane Euclidean again (up to an overall similarity: rotation + translation + uniform scale).
 
