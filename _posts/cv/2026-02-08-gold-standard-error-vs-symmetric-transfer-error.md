@@ -85,3 +85,27 @@ The gold-standard geometric error is strictly superior for benchmarking:
 ## 9. Terminology in practice
 
 In practice, symmetric transfer error is commonly (and sometimes loosely) called “geometric error,” but **this terminology is inaccurate** unless the distance to the constraint manifold is explicitly minimized.
+
+## 10. cv::findHomography() of opencv
+
+It does NOT optimize the true Gold-standard error. It optimizes a one-sided reprojection error.
+
+Why OpenCV Doesn't Use Gold Standard
+
+- Because Gold-standard requires:
+- Optimizing corrected points
+- Enforcing constraint per match
+- Much heavier computation
+- More complex Jacobians
+- Iterative correction inside each residual
+
+For practical computer vision (AR, stitching, tracking): Forward reprojection error is good enough.
+
+From cheapest to most correct:
+
+1️⃣ Algebraic error (DLT raw)
+2️⃣ Forward reprojection error (OpenCV LM)
+3️⃣ Symmetric transfer error
+4️⃣ Gold-standard (true ML under Gaussian noise)
+
+OpenCV stops at level 2.
