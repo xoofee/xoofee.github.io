@@ -4,3 +4,4 @@ _site/
 # Ignore the Gemfile that is generated
 Gemfile.lock
 .vscode
+.DS_Store
