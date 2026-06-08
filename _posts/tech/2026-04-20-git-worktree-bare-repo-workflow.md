@@ -74,7 +74,16 @@ touch .env.development .env.production
 
 If you already have a normal clone with untracked files such as `.env`, you can migrate into the bare-repo layout without throwing those away.
 
-First create the new hub:
+Before doing any migration, make sure the existing checkout has no staged or unstaged tracked changes:
+
+```bash
+cd ~/dev/old-project
+git status
+```
+
+Untracked and gitignored files are different. Those are often the files you intentionally want to preserve, especially local `.env` files, generated assets, caches, or large build outputs.
+
+For a small project, the simple copy-based migration is fine. First create the new hub:
 
 ```bash
 cd ~/dev
@@ -99,6 +108,57 @@ rm -rf ~/dev/old-project
 ```
 
 The reason this works is that you strip the old checkout of its Git metadata, then move the whole working directory state into the new worktree. That preserves untracked files, local config, and environment files.
+
+For a large project, copying the whole directory can be slow and wasteful. If your old checkout contains huge gitignored build files or many local environment files, prefer moving the existing working tree into the new worktree instead.
+
+Create the bare repository hub and the target worktree:
+
+```bash
+cd ~/dev
+mkdir my-project-pro
+git clone --bare https://github.com/user/repo.git my-project-pro/.git
+cd my-project-pro
+git worktree add develop develop
+```
+
+Now `develop/` is a fresh checkout. Remove the checked-out files inside `develop/`, but keep `develop/.git`:
+
+```bash
+cd develop
+find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+cd ..
+```
+
+That `.git` entry is a small pointer file that connects this worktree back to the bare repository hub:
+
+```text
+my-project-pro/
+├── .git/       # bare repository; keep this
+└── develop/
+    └── .git   # pointer file; keep this
+```
+
+Then remove the Git metadata from the old checkout and move its working files into `develop/`:
+
+```bash
+rm -rf ~/dev/old-project/.git
+mv ~/dev/old-project/. develop/
+```
+
+This keeps the large ignored files and local environment files without making a second copy of them.
+
+After the move, verify the result:
+
+```bash
+cd develop
+git status
+git rev-parse --show-toplevel
+git worktree list
+```
+
+You want `git status` to be clean, `git rev-parse --show-toplevel` to point at `my-project-pro/develop`, and `git worktree list` to show both the bare hub and the `develop` worktree.
+
+One important caution: removing `old-project/.git` discards Git-only local metadata from that checkout, such as stashes, local-only branches, hooks, reflog, and repo-local config. Push, export, or back up anything important before deleting it.
 
 # 4. Daily workflow
 
