@@ -98,7 +98,7 @@ Please select different date and time because all appointments are scheduled in 
 +862028292270
 ```
 
-这套系统确实难用，但客服体验还可以。我打的时候接通不需要排队，沟通也比较直接。
+其实说难用，应该还是与在中国 Cloudflare 访问不稳定有关。客服还是挺好的，我打的时候接通不需要排队，沟通也比较直接。
 
 ## 小结
 
