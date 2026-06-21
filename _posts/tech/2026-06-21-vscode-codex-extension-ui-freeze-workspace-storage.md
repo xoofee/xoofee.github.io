@@ -8,10 +8,12 @@ tags: [vscode, codex, extension, openssl, debugging]
 
 Sometimes the Codex extension in VS Code can get stuck even though the Codex CLI still works normally.
 
-In this case, the UI was not fully crashed. It was stuck in a bad streaming state:
+In this case, the plugin UI did not finish startup. The Codex panel showed only the centered Codex icon, blinking about every three seconds:
 
-- the chat UI stayed on "thinking..."
-- no response stream appeared
+- no session history appeared
+- no prompt input appeared
+- no usable chat UI appeared
+- only the center icon kept blinking
 - the CLI worked
 - reloading VS Code did not fix it
 - reinstalling the extension did not fix it
@@ -36,9 +38,9 @@ The confusing part was that everything around it looked mostly healthy:
 - VS Code did not obviously crash
 - the extension host did not visibly die
 - the Codex CLI still worked
-- authentication seemed to start
-- the request appeared to begin
-- the response stream never completed
+- the Codex plugin panel opened
+- the plugin widget rendered only a centered blinking icon
+- no previous sessions or prompt box appeared
 
 That pattern matters. If the CLI works but the VS Code UI does not, the problem may be local VS Code extension state rather than the Codex service or the network.
 
@@ -120,20 +122,21 @@ The exact internal object does not matter much for the fix. The useful conclusio
 
 The behavior was not a normal network failure.
 
-The request appeared to start:
+The plugin appeared to start:
 
-- authentication/session state partially loaded
-- the extension began the request
-- a stream connection seemed to open
+- the VS Code panel opened
+- the Codex webview rendered something
+- the centered icon blinked about every three seconds
 
-But the lifecycle never completed:
+But the UI never finished initializing:
 
-- no response arrived in the chat UI
-- the UI stayed pending
+- no session history appeared
+- no prompt input appeared
+- no usable controls appeared
 - VS Code did not clearly crash
 - the CLI remained usable
 
-That suggests a broken extension-side state machine rather than a full service outage. The extension was alive enough to start, but not healthy enough to finish the streaming lifecycle.
+That suggests a broken extension-side startup or state-restoration path rather than a full service outage. The extension was alive enough to create the panel, but not healthy enough to restore state and show the normal chat interface.
 
 # 7. Storage reset attempts
 
@@ -167,7 +170,7 @@ That matches the observed behavior:
 - global storage reset did not help
 - workspace storage reset did help
 
-So the likely root cause was corrupted or inconsistent VS Code workspace storage that caused a decrypt failure and left the Codex extension stuck during streaming.
+So the likely root cause was corrupted or inconsistent VS Code workspace storage that caused a decrypt failure and left the Codex extension stuck while initializing its UI.
 
 # 9. Why the CLI still worked
 
@@ -202,7 +205,7 @@ If the Codex extension UI freezes but the CLI still works, use this order:
    BAD_DECRYPT
    ```
 
-5. If the request starts but the response stream never completes, suspect extension-side state corruption.
+5. If the panel opens but shows only the blinking center icon, with no history and no prompt input, suspect extension-side state corruption.
 6. Move or remove workspace storage:
 
    ```bash
@@ -220,7 +223,7 @@ Do not assume this is a Codex outage just because the VS Code UI is stuck.
 The strongest signal in this case was:
 
 ```text
-CLI works, VS Code UI starts a request, but streaming never completes.
+CLI works, VS Code Codex panel opens, but only the blinking center icon appears.
 ```
 
 Together with `OPENSSL_internal:BAD_DECRYPT`, that pointed to broken VS Code extension state.
