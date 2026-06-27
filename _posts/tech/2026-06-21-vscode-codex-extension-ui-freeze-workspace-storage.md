@@ -1,14 +1,33 @@
 ---
-title: "Fix VS Code Codex Extension UI Freeze When CLI Still Works"
+title: "VS Code Codex Extension UI Freeze May Be Caused by Missing Shell Environment"
 date: 2026-06-21
-permalink: /posts/2026/06/vscode_codex_extension_ui_freeze_workspace_storage/
+permalink: /posts/2026/06/vscode_codex_extension_ui_freeze_shell_environment/
 categories: tech
-tags: [vscode, codex, extension, openssl, debugging]
+tags: [vscode, codex, extension, openssl, debugging, environment]
 ---
 
 Sometimes the Codex extension in VS Code can get stuck even though the Codex CLI still works normally.
 
-In this case, the plugin UI did not finish startup. The Codex panel showed only the centered Codex icon, blinking about every three seconds:
+I originally thought the fix was deleting VS Code workspace storage. After more observation, that now looks misleading. Removing `workspaceStorage` may have only worked by chance, or only temporarily. It does not seem reliable enough to explain the real problem.
+
+The stronger clue is this:
+
+```text
+When VS Code is launched from a terminal, the Codex extension does not seem to get stuck.
+```
+
+So my current hypothesis is that the Codex extension is missing some environment inherited from the user's shell when VS Code is launched from the desktop.
+
+I am still observing this. It is stable for now, but I do not want to call it proven yet.
+
+* TOC
+{:toc}
+
+# 1. Problem summary
+
+The visible symptom was simple: the Codex extension UI froze in VS Code.
+
+The Codex panel showed only the centered Codex icon, blinking about every three seconds:
 
 - no session history appeared
 - no prompt input appeared
@@ -18,55 +37,107 @@ In this case, the plugin UI did not finish startup. The Codex panel showed only 
 - reloading VS Code did not fix it
 - reinstalling the extension did not fix it
 
-The final fix was deleting VS Code workspace storage:
-
-```bash
-rm -rf ~/.config/Code/User/workspaceStorage
-```
-
-This resets VS Code's per-workspace stored state. That can include extension state, cached webview data, and workspace UI/session data, so treat it as a reset, not a harmless refresh.
-
-* TOC
-{:toc}
-
-# 1. Problem summary
-
-The visible symptom was simple: the Codex extension UI froze in VS Code.
-
 The confusing part was that everything around it looked mostly healthy:
 
 - VS Code did not obviously crash
 - the extension host did not visibly die
 - the Codex CLI still worked
 - the Codex plugin panel opened
-- the plugin widget rendered only a centered blinking icon
-- no previous sessions or prompt box appeared
 
-That pattern matters. If the CLI works but the VS Code UI does not, the problem may be local VS Code extension state rather than the Codex service or the network.
+At first, I interpreted this as broken VS Code extension state. Now I think that was probably too narrow.
 
-# 2. Quick fix
+# 2. Current experiment: launch VS Code with shell environment
 
-The fix that resolved this case was:
+The current workaround I am testing is changing the VS Code desktop entry so it launches Code through an interactive shell.
+
+The original desktop entry used:
+
+```ini
+Exec=/usr/share/code/code %F
+```
+
+The current experiment uses:
+
+```ini
+Exec=bash -ic '/usr/share/code/code "$@"' bash %F
+```
+
+For the "New Empty Window" action, the original entry used:
+
+```ini
+Exec=/usr/share/code/code --new-window %F
+```
+
+The current experiment uses:
+
+```ini
+Exec=bash -ic '/usr/share/code/code --new-window "$@"' bash %F
+```
+
+With this desktop-file method, the Codex extension has been stable so far.
+
+The important idea is not that this exact `bash -ic` line is magically special. The important idea is that VS Code launched from the desktop may not receive the same environment as VS Code launched from a terminal.
+
+# 3. Why this looks like an environment problem
+
+The strongest observation is:
+
+```text
+VS Code launched from terminal: Codex extension works
+VS Code launched from desktop: Codex extension may get stuck
+```
+
+That split points away from a pure Codex service outage. It also weakens the old theory that workspace storage was the whole cause.
+
+The Codex CLI already worked. The VS Code extension also worked when Code inherited the terminal environment. So the failure may be in the environment available to the extension when VS Code starts from the desktop launcher.
+
+Possible missing environment could include shell initialization, paths, authentication-related variables, proxy variables, or other configuration that exists in an interactive shell but not in the desktop session.
+
+I have not isolated the exact variable yet.
+
+# 4. The older workspace storage theory
+
+The first version of this post claimed that the fix was deleting VS Code workspace storage:
 
 ```bash
 rm -rf ~/.config/Code/User/workspaceStorage
 ```
 
-Then restart VS Code and try the Codex extension again.
+That conclusion now seems too confident.
 
-On Linux, this is the normal VS Code user storage path. Other VS Code builds or platforms use different paths, for example:
+Deleting `workspaceStorage` did appear to help once. But later observation made it look unreliable:
 
-- VS Code Insiders: `~/.config/Code - Insiders/User/workspaceStorage`
-- macOS: `~/Library/Application Support/Code/User/workspaceStorage`
-- Windows: `%APPDATA%\Code\User\workspaceStorage`
+- it was not stable enough to solve the stuck UI repeatedly
+- the problem could still happen again
+- launching VS Code from terminal avoided the stuck state more consistently
+- the desktop-file shell-launch method is currently more promising
 
-If you want a reversible version, move the directory instead of deleting it:
+So I now treat the storage reset as a previous attempt, not the real fix.
+
+If you still want to try it, use a reversible move instead of deleting it:
 
 ```bash
 mv ~/.config/Code/User/workspaceStorage ~/.config/Code/User/workspaceStorage.bak
 ```
 
-# 3. Things that did not fix it
+But I would not start there anymore unless there is clear evidence that VS Code workspace state is actually corrupted.
+
+# 5. The old log clue: BAD_DECRYPT
+
+One clue from the first debugging pass was this Extension Host log message:
+
+```text
+OPENSSL_internal:BAD_DECRYPT
+Cipher functions: BAD_DECRYPT
+```
+
+At the time, that made `workspaceStorage` look like the likely problem. A decrypt error sounds like stored state, cached credentials, or extension data failing to restore.
+
+That may still be related. But it may also be secondary. For example, if the extension starts without the expected environment, it may fail while trying to restore or use some state.
+
+So I no longer want to over-read this log message as proof that workspace storage was corrupted.
+
+# 6. Things that did not reliably fix it
 
 The first attempts were the natural ones.
 
@@ -86,150 +157,60 @@ Ctrl+Shift+P -> Developer: Restart Extension Host
 
 This gave no lasting improvement.
 
-Uninstalling and reinstalling the Codex extension also did not solve it. That was the important clue: reinstalling the extension did not remove the broken workspace state that VS Code was restoring.
+Uninstalling and reinstalling the Codex extension also did not solve it reliably.
 
-# 4. The useful debugging entry point
-
-The most useful diagnostic step was opening the Extension Host logs:
-
-```text
-Ctrl+Shift+P -> Developer: Show Logs... -> Extension Host
-```
-
-This was more useful than staring at the frozen UI. The UI only showed the symptom. The Extension Host log showed what kind of failure was happening underneath.
-
-# 5. The key log message
-
-The important log entry was:
-
-```text
-OPENSSL_internal:BAD_DECRYPT
-Cipher functions: BAD_DECRYPT
-```
-
-That points to a decryption failure while VS Code or the extension host is reading stored state.
-
-In practical terms, that stored state can include things like:
-
-- cached authentication/session data
-- extension state
-- encrypted tokens
-- workspace-scoped extension data
-
-The exact internal object does not matter much for the fix. The useful conclusion is that VS Code was trying to restore state, and some encrypted state could not be decrypted cleanly.
-
-# 6. The real failure mode
-
-The behavior was not a normal network failure.
-
-The plugin appeared to start:
-
-- the VS Code panel opened
-- the Codex webview rendered something
-- the centered icon blinked about every three seconds
-
-But the UI never finished initializing:
-
-- no session history appeared
-- no prompt input appeared
-- no usable controls appeared
-- VS Code did not clearly crash
-- the CLI remained usable
-
-That suggests a broken extension-side startup or state-restoration path rather than a full service outage. The extension was alive enough to create the panel, but not healthy enough to restore state and show the normal chat interface.
-
-# 7. Storage reset attempts
-
-After seeing `BAD_DECRYPT`, the working hypothesis was corrupted VS Code extension storage.
-
-The first reset was global storage:
+Resetting global storage did not fix it:
 
 ```bash
 rm -rf ~/.config/Code/User/globalStorage
 ```
 
-That did not fix the issue in this case.
-
-The second reset was workspace storage:
+Resetting workspace storage seemed to help once, but later looked more like coincidence than root cause:
 
 ```bash
 rm -rf ~/.config/Code/User/workspaceStorage
 ```
 
-That fixed it completely.
+# 7. Practical checklist
 
-# 8. Why workspace storage mattered
+If the Codex extension UI freezes but the CLI still works, I would now debug it in this order:
 
-VS Code stores a lot of per-workspace extension state under `workspaceStorage`.
+1. Launch VS Code from a terminal:
 
-If the corrupted or inconsistent state is workspace-scoped, removing `globalStorage` will not help. VS Code may keep reloading the broken data every time that workspace opens.
-
-That matches the observed behavior:
-
-- extension reinstall did not help
-- global storage reset did not help
-- workspace storage reset did help
-
-So the likely root cause was corrupted or inconsistent VS Code workspace storage that caused a decrypt failure and left the Codex extension stuck while initializing its UI.
-
-# 9. Why the CLI still worked
-
-The Codex CLI and the VS Code extension do not rely on exactly the same runtime state.
-
-The CLI does not depend on VS Code's Extension Host, webview state, or VS Code's workspace storage. So it can remain healthy while the VS Code UI is broken.
-
-In this case:
-
-| Component | Status |
-| --- | --- |
-| Codex CLI | OK |
-| VS Code Codex UI | Broken |
-
-That split is an important diagnostic signal.
-
-# 10. Practical checklist
-
-If the Codex extension UI freezes but the CLI still works, use this order:
-
-1. Reload the VS Code window.
-2. Restart the extension host.
-3. Check the Extension Host logs:
-
-   ```text
-   Ctrl+Shift+P -> Developer: Show Logs... -> Extension Host
+   ```bash
+   code
    ```
 
-4. Look for decrypt or state-restoration errors, especially:
+2. Open the same workspace and check whether the Codex extension starts normally.
+3. If terminal launch works, compare that with launching VS Code from the desktop icon.
+4. If desktop launch is the failing path, test a desktop entry that starts Code through an interactive shell:
 
-   ```text
-   BAD_DECRYPT
+   ```ini
+   Exec=bash -ic '/usr/share/code/code "$@"' bash %F
    ```
 
-5. If the panel opens but shows only the blinking center icon, with no history and no prompt input, suspect extension-side state corruption.
-6. Move or remove workspace storage:
+5. Also update the new-window action if you use it:
+
+   ```ini
+   Exec=bash -ic '/usr/share/code/code --new-window "$@"' bash %F
+   ```
+
+6. Only then consider storage reset as a fallback, preferably with a reversible move:
 
    ```bash
    mv ~/.config/Code/User/workspaceStorage ~/.config/Code/User/workspaceStorage.bak
    ```
 
-7. Restart VS Code.
+# 8. Current takeaway
 
-If the moved directory fixes the issue, you can delete the backup later.
+I no longer think `workspaceStorage` deletion was the real answer.
 
-# 11. Final takeaway
-
-Do not assume this is a Codex outage just because the VS Code UI is stuck.
-
-The strongest signal in this case was:
+The current best explanation is:
 
 ```text
-CLI works, VS Code Codex panel opens, but only the blinking center icon appears.
+The Codex extension may need environment that exists when VS Code is launched from a terminal, but is missing when VS Code is launched directly from the desktop.
 ```
 
-Together with `OPENSSL_internal:BAD_DECRYPT`, that pointed to broken VS Code extension state.
+Changing the desktop entry to launch Code through `bash -ic` is stable for now.
 
-The effective fix was resetting workspace storage:
-
-```bash
-rm -rf ~/.config/Code/User/workspaceStorage
-```
+This is still an experiment. The root cause is not fully proven yet, and I still need to observe whether this stays fixed over time.
