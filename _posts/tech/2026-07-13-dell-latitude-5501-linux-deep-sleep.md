@@ -1,0 +1,177 @@
+---
+title: "Dell Latitude 5501 Linux Deep Sleep Experiment"
+date: 2026-07-13
+permalink: /posts/2026/07/dell_latitude_5501_linux_deep_sleep/
+categories: tech
+tags: [linux, ubuntu, dell, suspend, sleep, acpi, nvidia]
+---
+
+I tried to reduce suspend battery drain on my Dell Latitude 5501 running Ubuntu 24.04.
+
+The default suspend mode was `s2idle`, and the suspend power draw looked too high: around 10W. Since the machine also exposed `deep` sleep, I tested ACPI S3 to see whether it could save more power.
+
+Short version:
+
+```text
+deep sleep saved power in theory, but resume was not reliable enough.
+```
+
+Even after updating BIOS and testing a newer kernel, the machine could still freeze after resume. I went back to `s2idle`.
+
+* TOC
+{:toc}
+
+# 1. Machine
+
+The test machine:
+
+```text
+Model: Dell Latitude 5501
+BIOS before: 1.25.0
+BIOS after: 1.44.0
+GPU: Intel UHD 630 + NVIDIA MX150
+Original kernel: 6.8.0-41-generic
+Later test kernel: 6.8.0-134-generic
+NVIDIA driver: 580.159.03
+```
+
+The default sleep mode was:
+
+```bash
+cat /sys/power/mem_sleep
+```
+
+Output:
+
+```text
+[s2idle] deep
+```
+
+So Linux was using `s2idle` by default, but `deep` was available.
+
+# 2. Enabling deep sleep for one session
+
+I first enabled `deep` only for the current boot:
+
+```bash
+echo deep | sudo tee /sys/power/mem_sleep
+```
+
+This is a good way to test before making the setting persistent. If it breaks, a reboot should return the machine to the default mode.
+
+After suspending and resuming, the laptop froze. I had to hard reset it.
+
+# 3. What the logs showed
+
+The logs confirmed that the system entered `deep` sleep:
+
+```text
+kernel: PM: suspend entry (deep)
+```
+
+But I did not see the normal resume lines that I would expect after a successful wake:
+
+```text
+ACPI: PM: Waking up from system sleep state S3
+PM: suspend exit
+nvidia-resume.service
+```
+
+That made the failure look quite low-level.
+
+My reading is that the machine did not get far enough back into Linux for the kernel and services to log a normal resume path. It looked more like a firmware, kernel, or device-resume failure than a regular userspace crash.
+
+# 4. BIOS update did not fix it
+
+The machine was originally on BIOS `1.25.0`.
+
+I updated it to BIOS `1.44.0`, then tested `deep` again.
+
+The result was still bad:
+
+```text
+deep sleep still froze after resume
+```
+
+So at least on this machine, the BIOS update alone was not enough to make ACPI S3 reliable.
+
+# 5. Newer kernel looked better, then still failed
+
+Next I installed a newer Ubuntu kernel:
+
+```text
+6.8.0-134-generic
+```
+
+I also checked that the NVIDIA DKMS module was built for it:
+
+```text
+nvidia/580.159.03, 6.8.0-134-generic, x86_64: installed
+```
+
+This looked promising at first.
+
+With BIOS `1.44.0` and kernel `6.8.0-134-generic`, the laptop appeared to resume successfully from `deep`. It stayed alive for about a minute after wake.
+
+Then it died or froze again.
+
+That made the result worse than a simple pass or fail. The resume path was improved enough to come back briefly, but not stable enough to trust.
+
+# 6. Conclusion
+
+My conclusion for this machine is:
+
+```text
+On my Dell Latitude 5501, deep/S3 sleep is still not reliable on Linux,
+even after BIOS 1.44.0 and kernel 6.8.0-134.
+```
+
+I gave up and went back to `s2idle`.
+
+The suspend power consumption is worse, but stability matters more. Saving battery is not useful if resume can randomly kill the session.
+
+# 7. Useful commands
+
+Check the available and active sleep mode:
+
+```bash
+cat /sys/power/mem_sleep
+```
+
+List previous boots:
+
+```bash
+journalctl --list-boots --no-pager
+```
+
+Inspect the previous boot:
+
+```bash
+journalctl -b -1 --no-pager -n 250
+```
+
+Filter kernel logs for suspend, resume, ACPI, NVIDIA, and likely failure clues:
+
+```bash
+journalctl -b -1 -k --no-pager | grep -Ei 'PM:|ACPI: PM|suspend|resume|waking|deep|nvidia|i915|i2c|watchdog|lockup|panic|BUG'
+```
+
+Check DKMS status:
+
+```bash
+dkms status
+```
+
+Check the running kernel:
+
+```bash
+uname -r
+```
+
+# 8. Takeaway
+
+If your laptop drains too much battery in `s2idle`, `deep` can look tempting.
+
+But on hybrid Intel/NVIDIA laptops, ACPI S3 can still be a trap. Test it carefully before making it persistent.
+
+For this Dell Latitude 5501, I am staying with `s2idle` for now.
