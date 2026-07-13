@@ -142,7 +142,6 @@ Before the fix, `ip link` may only show normal interfaces:
 ```text
 lo
 wlp60s0
-wg0
 docker0
 waydroid0
 ```
@@ -239,26 +238,7 @@ This is why TUN mode is useful for:
 - system services
 - applications that ignore proxy variables
 
-# 9. Watch other VPN interfaces
-
-If the machine already has VPN interfaces, such as WireGuard:
-
-```text
-wg0
-```
-
-then routing order matters.
-
-After enabling Clash TUN, inspect:
-
-```bash
-ip route
-ip rule
-```
-
-Make sure the Clash routing rules do not conflict with existing VPN rules.
-
-# 10. Summary
+# 9. Summary
 
 Clash Verge Service Mode running does not automatically mean TUN mode has enough permission.
 
