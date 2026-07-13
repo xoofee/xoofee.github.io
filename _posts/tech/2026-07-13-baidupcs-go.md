@@ -1,7 +1,7 @@
 ---
-title: "Using BaiduPCS-Go"
+title: "Using BaiduPCS-Go cli"
 date: 2026-07-13
-permalink: /posts/2026/07/baidupcs_go/
+permalink: /posts/2026/07/baidupcs_go_cli/
 categories: tech
 tags: [baidu, baidupcs-go, netdisk, download]
 ---
