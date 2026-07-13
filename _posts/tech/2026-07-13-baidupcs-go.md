@@ -81,7 +81,8 @@ STOKEN
 Then log in:
 
 ```bash
-./BaiduPCS-Go login -cookies='BDUSS=...; STOKEN=...; ...'
+BaiduPCS-Go login -bduss='<copy_from_broswer>' -stoken='<copy_from_broswer>'
+
 ```
 
 Check the login:
