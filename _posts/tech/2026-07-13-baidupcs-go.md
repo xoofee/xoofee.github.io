@@ -144,6 +144,50 @@ If you are in the normal terminal instead of the BaiduPCS-Go interactive shell, 
 ./BaiduPCS-Go config set -max_parallel 1 -max_download_load 1
 ```
 
+There are two important download concurrency settings:
+
+```bash
+config set -max_parallel <N> -max_download_load <M>
+```
+
+`max_parallel` controls how many threads or connections are used inside one file. It helps most for large files, because BaiduPCS-Go can split one big file into ranges and download those ranges in parallel.
+
+`max_download_load` controls how many different files are downloaded at the same time. It helps most for folders with many files, especially many small files.
+
+A rough way to think about total pressure is:
+
+```text
+total connections ~= max_parallel * max_download_load
+```
+
+For one or a few large files:
+
+```bash
+config set -max_parallel 10 -max_download_load 1
+```
+
+For many tiny files:
+
+```bash
+config set -max_parallel 1 -max_download_load 8
+```
+
+For mixed folders with medium or large files:
+
+```bash
+config set -max_parallel 8 -max_download_load 2
+```
+
+For free or non-VIP accounts, keep both low, often:
+
+```bash
+config set -max_parallel 1 -max_download_load 1
+```
+
+Higher concurrency may temporarily look faster, but it can trigger Baidu throttling and make downloads much slower.
+
+For VIP or SVIP accounts, moderate concurrency is usually safer than extreme values. Start with `10/1` for large files, or `1/8` for many tiny files, then adjust based on actual speed and error rate.
+
 # 7. Fix unreadable terminal output
 
 If terminal output appears as underscores or unreadable text, set UTF-8 locale variables:
