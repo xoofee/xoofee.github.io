@@ -117,7 +117,94 @@ Then it died or froze again.
 
 That made the result worse than a simple pass or fail. The resume path was improved enough to come back briefly, but not stable enough to trust.
 
-# 6. Conclusion
+# 6. Graphics side note: llvmpipe was only Xwayland
+
+During the same round of testing, I also noticed a separate graphics issue.
+
+This command reported software rendering:
+
+```bash
+glxinfo -B
+```
+
+The suspicious lines were:
+
+```text
+OpenGL renderer string: llvmpipe
+Accelerated: no
+```
+
+At first, that looked like the whole GNOME session was using CPU rendering. But the machine was running GNOME on Wayland, and `glxinfo -B` mainly tests the X11/GLX path. On a Wayland desktop, that means it is mostly testing `Xwayland`, not native Wayland rendering.
+
+I checked the native Wayland path with:
+
+```bash
+glmark2-wayland
+```
+
+That reported:
+
+```text
+GL_VENDOR:      Intel
+GL_RENDERER:    Mesa Intel(R) UHD Graphics 630 (CFL GT2)
+```
+
+So native Wayland rendering was fine. The Intel GPU was being used correctly. The broken path was narrower: Xwayland/GLX was falling back to `llvmpipe`.
+
+The fix was a targeted update:
+
+```bash
+sudo apt install xwayland xserver-xorg-core
+```
+
+This upgraded only a small group of display-server packages:
+
+```text
+xserver-common
+xserver-xephyr
+xserver-xorg-core
+xserver-xorg-legacy
+xwayland
+```
+
+After rebooting, `glxinfo -B` no longer reported `llvmpipe`.
+
+I also tested NVIDIA PRIME offload. This worked for GLX/X11 applications:
+
+```bash
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia glxinfo -B
+```
+
+It reported:
+
+```text
+OpenGL vendor string: NVIDIA Corporation
+OpenGL renderer string: NVIDIA GeForce MX150/PCIe/SSE2
+```
+
+For native Wayland/EGL applications, forcing NVIDIA was less useful. This command still used Intel:
+
+```bash
+__NV_PRIME_RENDER_OFFLOAD=1 glmark2-wayland
+```
+
+I also tried forcing the NVIDIA EGL vendor directly:
+
+```bash
+__NV_PRIME_RENDER_OFFLOAD=1 \
+__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json \
+glmark2-wayland
+```
+
+That failed with:
+
+```text
+eglGetDisplay() failed
+```
+
+So I did not use that override. The practical setup is still `prime-select on-demand`: Intel drives the Wayland desktop, and NVIDIA is used explicitly for selected GLX/X11 or Vulkan applications.
+
+# 7. Conclusion
 
 My conclusion for this machine is:
 
@@ -130,7 +217,7 @@ I gave up and went back to `s2idle`.
 
 The suspend power consumption is worse, but stability matters more. Saving battery is not useful if resume can randomly kill the session.
 
-# 7. Useful commands
+# 8. Useful commands
 
 Check the available and active sleep mode:
 
@@ -168,7 +255,7 @@ Check the running kernel:
 uname -r
 ```
 
-# 8. Takeaway
+# 9. Takeaway
 
 If your laptop drains too much battery in `s2idle`, `deep` can look tempting.
 
