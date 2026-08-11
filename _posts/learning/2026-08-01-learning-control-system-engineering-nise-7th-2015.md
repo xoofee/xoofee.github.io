@@ -26,7 +26,7 @@ Use one heading per question. Under it, keep at most two answer blocks:
 Copy this template when adding a new question:
 
 ```markdown
-### Qn. Question text here
+#### Qn. Question text here
 
 **Me**
 
@@ -44,7 +44,7 @@ Rules of thumb:
 - Prefer short bullets over long prose.
 - If not answered yet, leave `_todo_`.
 - Do not overwrite the other author's block; append a note or a second revision instead.
-- Chapter sections use `##`; questions use `###` so the TOC stays useful.
+- Hierarchy: `##` chapter → `###` section (e.g. Review Questions) → `####` question.
 
 ---
 
@@ -52,7 +52,7 @@ Rules of thumb:
 
 ### Review Questions
 
-### Q1. Name three applications for feedback control systems.
+#### Q1. Name three applications for feedback control systems.
 
 **Me**
 
@@ -66,7 +66,7 @@ Rules of thumb:
 2. **Building climate control (thermostat)** — senses room temperature, compares to the setpoint, switches heating/cooling to reduce error.
 3. **Hard-disk head positioning** — senses head location relative to the track, drives the voice-coil motor to stay aligned.
 
-### Q2. Name three reasons for using feedback control systems and at least one reason for not using them.
+#### Q2. Name three reasons for using feedback control systems and at least one reason for not using them.
 
 **Me**
 
@@ -95,7 +95,7 @@ Reasons for not using:
 2. **Risk of instability** — high gain or delay can make a stable open-loop plant oscillate
 3. **Reduced open-loop gain** — feedback lowers overall gain; extra amplification may be needed
 
-### Q3. Give three examples of open-loop systems.
+#### Q3. Give three examples of open-loop systems.
 
 **Me**
 
@@ -111,7 +111,7 @@ Note — the same car can be closed-loop if the driver is inside the system boun
 2. **Microwave oven** — fixed time/power; no food-temperature feedback
 3. **Timer-based washing machine** — fixed wash/rinse/spin sequence; no cleanliness sensor
 
-### Q4. Functionally, how do closed-loop systems differ from open-loop systems?
+#### Q4. Functionally, how do closed-loop systems differ from open-loop systems?
 
 **Me**
 
@@ -123,7 +123,7 @@ A closed-loop system measures its output, compares it with the desired input to 
 
 An open-loop system acts from the input alone, with no output measurement, so it cannot self-correct for disturbances or parameter changes.
 
-### Q5. State one condition under which the error signal of a feedback control system would not be the difference between the input and the output.
+#### Q5. State one condition under which the error signal of a feedback control system would not be the difference between the input and the output.
 
 **Me**
 
@@ -133,7 +133,7 @@ _todo_
 
 _todo_
 
-### Q6. If the error signal is not the difference between input and output, by what general name can we describe the error signal?
+#### Q6. If the error signal is not the difference between input and output, by what general name can we describe the error signal?
 
 **Me**
 
@@ -143,7 +143,7 @@ _todo_
 
 _todo_
 
-### Q7. Name two advantages of having a computer in the loop.
+#### Q7. Name two advantages of having a computer in the loop.
 
 **Me**
 
@@ -153,7 +153,7 @@ _todo_
 
 _todo_
 
-### Q8. Name the three major design criteria for control systems.
+#### Q8. Name the three major design criteria for control systems.
 
 **Me**
 
@@ -163,7 +163,7 @@ _todo_
 
 _todo_
 
-### Q9. Name the two parts of a system’s response.
+#### Q9. Name the two parts of a system’s response.
 
 **Me**
 
@@ -173,7 +173,7 @@ _todo_
 
 _todo_
 
-### Q10. Physically, what happens to a system that is unstable?
+#### Q10. Physically, what happens to a system that is unstable?
 
 **Me**
 
@@ -183,7 +183,7 @@ _todo_
 
 _todo_
 
-### Q11. Instability is attributable to what part of the total response?
+#### Q11. Instability is attributable to what part of the total response?
 
 **Me**
 
@@ -193,7 +193,7 @@ _todo_
 
 _todo_
 
-### Q12. Describe a typical control system analysis task.
+#### Q12. Describe a typical control system analysis task.
 
 **Me**
 
@@ -203,7 +203,7 @@ _todo_
 
 _todo_
 
-### Q13. Describe a typical control system design task.
+#### Q13. Describe a typical control system design task.
 
 **Me**
 
@@ -213,7 +213,7 @@ _todo_
 
 _todo_
 
-### Q14. Adjustments of the forward path gain can cause changes in the transient response. True or false?
+#### Q14. Adjustments of the forward path gain can cause changes in the transient response. True or false?
 
 **Me**
 
@@ -223,7 +223,7 @@ _todo_
 
 _todo_
 
-### Q15. Name three approaches to the mathematical modeling of control systems.
+#### Q15. Name three approaches to the mathematical modeling of control systems.
 
 **Me**
 
@@ -233,7 +233,7 @@ _todo_
 
 _todo_
 
-### Q16. Briefly describe each of your answers to Question 15.
+#### Q16. Briefly describe each of your answers to Question 15.
 
 **Me**
 
@@ -247,4 +247,4 @@ _todo_
 
 ## Chapter 2 — Modeling in the Frequency Domain
 
-_Coming next. Add review questions with the same `### Qn` / **Me** / **LLM** pattern._
+_Coming next. Add review questions with the same `#### Qn` / **Me** / **LLM** pattern._
