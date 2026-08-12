@@ -263,6 +263,8 @@ When filling a new row: record **panel as read** (no dot) → manual form → `0
 | **`EE083`** | EE08.3 cable / link | Reseat CN3 |
 | **`E6400`** ↔ `_88rn` ~3 s | E640.0 + auto fault reset | Stop launch; cool; **d03** |
 | **`E6200`** blink | E620.0 motor overload | Wait ≥30 s; slower demos; **d04** |
+| **`E6200` again ~5 s after ROS reset** | Latch cleared, I²t/re-enable still overloaded | Stop launch; cool longer; **d05** |
+| Shaft jumps after `reset_fault` pulse | CSP catch-up (target ≠ actual) | Not a move cmd; see **d06** + `docs/cia402_csp.md` |
 ## References
 
 1. **SV660N Series Servo Drive Advanced User Guide**
