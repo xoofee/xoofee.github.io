@@ -135,6 +135,20 @@ and runtime state:
 saved_entry=Ubuntu
 ```
 
+You can inspect that runtime state directly:
+
+```bash
+grub-editenv /boot/grub/grubenv list
+```
+
+Example output:
+
+```text
+saved_entry=ubuntu>gnulinux-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f>gnulinux-6.8.0-134-generic-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
+```
+
+The value is the menu path GRUB saved, not a friendly label. That makes the second source of truth more visible—and a bit harder to read by hand.
+
 The user has to understand the relationship between them.
 
 Conceptually:
