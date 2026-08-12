@@ -4,12 +4,12 @@ date: 2026-08-11
 permalink: /posts/2026/08/sv660n-keypad-panel-status-codes/
 categories: tech
 tags: [sv660n, inovance, ethercat, igh, cia402, servo, stacker]
-excerpt: "Quick reference for the 5-digit LED keypad on Inovance SV660N (MS1 / EtherCAT): how to decode _28ry, AL blink rules, servo status, and everyday combinations on the stacker."
+excerpt: "Quick reference for the 5-digit LED keypad on Inovance SV660N (MS1 / EtherCAT): decode _28ry, AL blink rules, and a maintained panel ↔ EtherCAT (0x603F / 0x203F / AL) error map."
 ---
 
 Quick reference for the 5‑digit LED keypad on **Inovance SV660N** (MS1 / EtherCAT), as used on this stacker.
 
-All digit layout and blink timings below are from the **SV660N Advanced User Guide** (status indication / Figure 8‑2), not from guesswork.
+All digit layout and blink timings below are from the **SV660N Advanced User Guide** (status indication / Figure 8‑2), not from guesswork. The [panel ↔ EtherCAT error map](#panel--ethercat-common-error-map) is maintained from the **SV660N Troubleshooting Guide** (fault tables → objects `0x603F` / `0x203F`) plus desk observations with IgH `ethercat`.
 
 * TOC
 {:toc}
@@ -159,6 +159,79 @@ Link may also be shown via 1st-LED `-` segments (PORT0 / PORT1) as in the [digit
 
 Do **not** confuse with PREOP’s single **`2`** blinking at 400 ms (normal).
 
+Panel text like **`EE083`** is Inovance **`EE08.3`** (group `EE08`, subcode `.3`) with the decimal point omitted on the 7‑seg.
+
+## Panel ↔ EtherCAT common error map
+
+Use the keypad for the **human-readable Inovance code**, and IgH CoE / AL for the **machine-readable** view. Maintain this table when new faults show up on the stacker desk.
+
+### Objects / CLI to read (common set)
+
+| Source | What | Command / note |
+|---|---|---|
+| AL state + `E` flag | EtherCAT Application Layer | `ethercat slaves` / `ethercat slaves -v` |
+| Kernel AL text | e.g. Invalid watchdog, No Sync | `journalctl -k \| grep -i EtherCAT` |
+| `0x6041` | CiA402 **statusword** (bit3 = Fault) | `ethercat upload -p0 0x6041 0 --type uint16` |
+| `0x603F` | CiA402 **Error code** (often shared by a fault family) | `ethercat upload -p0 0x603F 0 --type uint16` |
+| `0x203F` | Inovance **Aux. Code** (disambiguates subcode) | `ethercat upload -p0 0x203F 0 --type uint32` |
+| `0x1001` | Generic error register | `ethercat upload -p0 0x1001 0 --type uint8` |
+| Keypad / H0b.34 | Same fault as panel; hex layout `sscc` (sub + code) | InoDriveShop / panel; not always needed if `0x203F` works |
+
+Healthy OP example (this machine): `ethercat slaves` → `OP +`; `0x6041=0x1637` (Operation enabled); `0x603F=0`; `0x203F=0`.
+
+**Encoding tip:** for EtherCAT group faults, Troubleshooting Guide maps:
+
+| Panel | `0x603F` (family) | `0x203F` Aux. Code (subcode) |
+|---|---|---|
+| `EE08.n` | `0x0E08` | `0xnE080E08` (nibble `n` = subcode) |
+| `EE09.n` | `0x6320` (most) | `0xnE090E09` |
+| `EE10.n` | `0x0E10` | `0xnE100E10` |
+
+So **`EE08.3`** ⇒ expect **`0x603F = 0x0E08`**, **`0x203F = 0x3E080E08`**. Do not expect `0x603F` alone to print `EE08.3`.
+
+SDO upload needs a reachable mailbox (usually PREOP+). In OP it often still works; if upload fails, drop to PREOP or read after the fault is latched and link is back.
+
+### Normal status (not faults)
+
+| Panel (typical) | `ethercat slaves` | `0x6041` (state) | Notes |
+|---|---|---|---|
+| `_18ry` solid | *(empty / link down)* or slave gone | n/a or unreachable | Cable out → AL Init on panel; master may show no slaves |
+| `_28ry` (`2` @ 400 ms) | `PREOP` | often Switch on disabled / Ready | Idle IgH + cable in |
+| `_48ry` (`4` slow blink) | `SAFEOP` | transitional | During activate / DC bring-up |
+| `_88ry` | `OP +` | Ready / Switched on | OP, not yet S‑ON |
+| `_88rn` | `OP +` | **Operation enabled** (e.g. `0x1637`) | Target for motion |
+
+### EtherCAT / network faults (panel `E…` ↔ CoE)
+
+Values for `0x603F` / `0x203F` are from **SV660N Troubleshooting Guide** fault list (Error Code / Aux. Code columns). “IgH / AL hints” are what we typically see on the PC side when that class of problem happens.
+
+| Panel | Name (manual) | `0x603F` | `0x203F` Aux. | Typical IgH / AL / desk hint | Seen on stacker? |
+|---|---|---|---|---|---|
+| **EE08.0** | Synchronization (SYNC) signal loss | `0x0E08` | `0x0E080E08` | Lost SYNC while OP; DC/cycle issues | |
+| **EE08.1** | Network status switchover error | `0x0E08` | `0x1E080E08` | OP → lower AL while enabled (master teardown / operator) | **Yes** — killing `ros2_control_node` while `_88rn` / Operation Enabled; CoE `0x6041=0x1638`, `0x203F=0x1E080E08` |
+| **EE08.3** | Network cable connected improperly | `0x0E08` | `0x3E080E08` | Link flap; `Link: DOWN` / `NO-CARRIER`; empty `ethercat slaves`; H0E.29 link-loss counters | **Yes** — panel `EE083`, all 5 blink; cleared when CN3 link stable → `_88rn` |
+| **EE08.4** | Data frame loss protection | `0x0E08` | `0x4E080E08` | Bad WC / EMC / cable quality | |
+| **EE08.5** | Data frame transfer error | `0x0E08` | `0x5E080E08` | Upstream marked invalid frame | |
+| **EE08.6** | Data update timeout | `0x0E08` | `0x6E080E08` | OP but no PDO for too long (master CPU starved / upstream link) | |
+| **EE09.3** | Homing method setting error | `0x6320` | `0x3E090E09` | Bad `0x6098` (do not confuse with EE08.0 SYNC loss) | |
+| **EE09.5** | PDO mapping beyond the limit | `0x6320` | `0x5E090E09` | Too many mapped objects / size | |
+| **EE10.1** | SM2 setting error | `0x0E10` | `0x1E100E10` | Bad RxPDO / SM2 config | |
+| **EE10.2** | SM3 configuration error | `0x0E10` | `0x2E100E10` | Bad TxPDO / SM3 config | |
+| **EE10.3** | PDO watchdog setting error | `0x0E10` | `0x3E100E10` | WD enable vs count mismatch; IgH AL **`0x001F` Invalid watchdog** class | bring-up note |
+| **EE10.4** | PLL / sync not completed | `0x0E10` | `0x4E100E10` | SAFEOP→OP with DC but no sync; AL **`0x002D` No Sync** class | bring-up note |
+| **EE11.x** | ESI / EEPROM | `0x5530` / `0x0E11` | `0xnE110E11` | Wrong ESI vs drive | |
+| **EE13.0** | EtherCAT sync period setting error | `0x6320` | `0x0E130E13` | Cycle time rejected | |
+| **EE15.0** | Excessive EtherCAT sync period error | `0x0E15` | `0x0E150E15` | Sync period out of range | |
+
+AL-only failures (panel may still show `_28ry` / drop toward `_18ry` **without** an `E…` code):
+
+| Panel / symptom | IgH observation | Usual cause on this desk |
+|---|---|---|
+| Stays `_28ry` or falls to `_18ry` | activate timeout; never `OP` | link flap, DC off when drive requires DC, bad PDO YAML |
+| Brief unlink | `Slaves: 0`, `Rx frames: 0` | CN3 unplug / bad RJ45 — can escalate to **EE08.3** if it happened in OP |
+
+When filling a new row: capture panel string → `0x6041` / `0x603F` / `0x203F` → `ethercat slaves -v` + one kernel AL line → add a “Seen on stacker?” note.
+
 ## Everyday combinations on this machine
 
 | You see | Decode | Expected? |
@@ -168,7 +241,8 @@ Do **not** confuse with PREOP’s single **`2`** blinking at 400 ms (normal).
 | `_48ry` (`4` slow blink) | AL SAFEOP + CSP + ready | During app activate |
 | `_88ry` / `…rn` (AL solid) | AL OP + CSP + ready/run | Target when CSP app is live |
 | `nr` | Not ready | Check main power, STO1/STO2 = 24 V |
-| All 5 flash + `E…` | Fault | Bad — see Troubleshooting Guide |
+| All 5 flash + `E…` | Fault | Bad — see [error map](#panel--ethercat-common-error-map) / Troubleshooting Guide |
+| `EE083` (all 5 blink) | **EE08.3** cable / link | Reseat CN3; expect CoE `0x603F=0x0E08`, `0x203F=0x3E080E08` if mailbox reachable |
 
 ## References
 
@@ -180,8 +254,9 @@ Do **not** confuse with PREOP’s single **`2`** blinking at 400 ms (normal).
 2. **SV660N Commissioning Guide** (keypad overview; fault = all five LEDs blink)
    - Mirror: [servotechnica.ru](https://servotechnica.ru/files/doc/documents/file-2489.pdf)
 
-3. **SV660N Troubleshooting Guide** (fault/warning codes, reset)
+3. **SV660N Troubleshooting Guide** (fault/warning codes, reset; **Error Code `603Fh` / Aux. Code `203Fh` tables**)
    - Example: [mrosupply.com](https://documents.mrosupply.com/product_documents/64/86/6486865/SV660N_Troubleshooting_EN_B00_19011908_49lowVG.pdf)
+   - H0b.34 fault log encoding; EE08 / EE10 families used in the [error map](#panel--ethercat-common-error-map)
 
 4. Inovance portal: [inovance.com](https://www.inovance.com/)
 
