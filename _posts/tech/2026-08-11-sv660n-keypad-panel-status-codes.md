@@ -4,7 +4,7 @@ date: 2026-08-11
 permalink: /posts/2026/08/sv660n-keypad-panel-status-codes/
 categories: tech
 tags: [sv660n, inovance, ethercat, igh, cia402, servo, stacker]
-excerpt: "Quick reference for the 5-digit LED keypad on Inovance SV660N (MS1 / EtherCAT): decode _28ry, AL blink rules, and a maintained panel ↔ EtherCAT (0x603F / 0x203F / AL) error map."
+excerpt: "SV660N 5-digit keypad: decode _28ry / AL blink, and panel-as-read faults (E6200, E6400, EE083) mapped to CoE 0x603F/0x203F."
 ---
 
 Quick reference for the 5‑digit LED keypad on **Inovance SV660N** (MS1 / EtherCAT), as used on this stacker.
@@ -155,15 +155,25 @@ Link may also be shown via 1st-LED `-` segments (PORT0 / PORT1) as in the [digit
 
 | Symptom | Meaning | Action |
 |---|---|---|
-| **All five digits blinking** + `E…` / warning | Fault or warning | Press **SET** to stop blink; fix cause; reset (`H0d.01=1` or FunIN.2 ALM‑RST) |
+| **All five digits blinking** + `E…` / warning | Fault or warning | Press **SET** to stop blink; fix cause; reset (`H0d.01=1` or FunIN.2 ALM‑RST / ROS `reset_fault`) |
 
 Do **not** confuse with PREOP’s single **`2`** blinking at 400 ms (normal).
 
-Panel text like **`EE083`** is Inovance **`EE08.3`** (group `EE08`, subcode `.3`) with the decimal point omitted on the 7‑seg.
+### How to read panel fault glyphs
+
+The 7‑seg **dot is tiny** (especially when all five digits blink). What you actually read is a compact string:
+
+| You read (panel) | Manual spelling | Rule |
+|---|---|---|
+| **`E6200`** | `E620.0` | `E` + group `620` + sub `0` |
+| **`E6400`** | `E640.0` | same |
+| **`EE083`** | `EE08.3` | `EE` + group `08` + sub `3` |
+
+Tables below put **Panel (as read)** first so you can look up what your eye saw without hunting for the dot.
 
 ## Panel ↔ EtherCAT common error map
 
-Use the keypad for the **human-readable Inovance code**, and IgH CoE / AL for the **machine-readable** view. Maintain this table when new faults show up on the stacker desk.
+Use the keypad for the **glyph you see**, and IgH CoE / AL for the **machine-readable** view. Maintain this table when new faults show up on the stacker desk.
 
 ### Objects / CLI to read (common set)
 
@@ -181,13 +191,13 @@ Healthy OP example (this machine): `ethercat slaves` → `OP +`; `0x6041=0x1637`
 
 **Encoding tip:** for EtherCAT group faults, Troubleshooting Guide maps:
 
-| Panel | `0x603F` (family) | `0x203F` Aux. Code (subcode) |
-|---|---|---|
-| `EE08.n` | `0x0E08` | `0xnE080E08` (nibble `n` = subcode) |
-| `EE09.n` | `0x6320` (most) | `0xnE090E09` |
-| `EE10.n` | `0x0E10` | `0xnE100E10` |
+| Manual | Panel (as read) | `0x603F` (family) | `0x203F` Aux. Code (subcode) |
+|---|---|---|---|
+| `EE08.n` | `EE08n` | `0x0E08` | `0xnE080E08` |
+| `EE09.n` | `EE09n` | `0x6320` (most) | `0xnE090E09` |
+| `EE10.n` | `EE10n` | `0x0E10` | `0xnE100E10` |
 
-So **`EE08.3`** ⇒ expect **`0x603F = 0x0E08`**, **`0x203F = 0x3E080E08`**. Do not expect `0x603F` alone to print `EE08.3`.
+So panel **`EE083`** = manual **`EE08.3`** ⇒ **`0x603F = 0x0E08`**, **`0x203F = 0x3E080E08`**.
 
 SDO upload needs a reachable mailbox (usually PREOP+). In OP it often still works; if upload fails, drop to PREOP or read after the fault is latched and link is back.
 
@@ -201,49 +211,58 @@ SDO upload needs a reachable mailbox (usually PREOP+). In OP it often still work
 | `_88ry` | `OP +` | Ready / Switched on | OP, not yet S‑ON |
 | `_88rn` | `OP +` | **Operation enabled** (e.g. `0x1637`) | Target for motion |
 
-### EtherCAT / network faults (panel `E…` ↔ CoE)
+### EtherCAT / network faults
 
-Values for `0x603F` / `0x203F` are from **SV660N Troubleshooting Guide** fault list (Error Code / Aux. Code columns). “IgH / AL hints” are what we typically see on the PC side when that class of problem happens.
+Values for `0x603F` / `0x203F` are from **SV660N Troubleshooting Guide**. “Desk hint” = what we see on the PC.
 
-| Panel | Name (manual) | `0x603F` | `0x203F` Aux. | Typical IgH / AL / desk hint | Seen on stacker? |
-|---|---|---|---|---|---|
-| **EE08.0** | Synchronization (SYNC) signal loss | `0x0E08` | `0x0E080E08` | Lost SYNC while OP; DC/cycle issues | |
-| **EE08.1** | Network status switchover error | `0x0E08` | `0x1E080E08` | OP → lower AL while enabled (master teardown / operator) | **Yes** — killing `ros2_control_node` while `_88rn` / Operation Enabled; CoE `0x6041=0x1638`, `0x203F=0x1E080E08` |
-| **EE08.3** | Network cable connected improperly | `0x0E08` | `0x3E080E08` | Link flap; `Link: DOWN` / `NO-CARRIER`; empty `ethercat slaves`; H0E.29 link-loss counters | **Yes** — panel `EE083`, all 5 blink; cleared when CN3 link stable → `_88rn` |
-| **EE08.4** | Data frame loss protection | `0x0E08` | `0x4E080E08` | Bad WC / EMC / cable quality | |
-| **EE08.5** | Data frame transfer error | `0x0E08` | `0x5E080E08` | Upstream marked invalid frame | |
-| **EE08.6** | Data update timeout | `0x0E08` | `0x6E080E08` | OP but no PDO for too long (master CPU starved / upstream link) | |
-| **EE09.3** | Homing method setting error | `0x6320` | `0x3E090E09` | Bad `0x6098` (do not confuse with EE08.0 SYNC loss) | |
-| **EE09.5** | PDO mapping beyond the limit | `0x6320` | `0x5E090E09` | Too many mapped objects / size | |
-| **EE10.1** | SM2 setting error | `0x0E10` | `0x1E100E10` | Bad RxPDO / SM2 config | |
-| **EE10.2** | SM3 configuration error | `0x0E10` | `0x2E100E10` | Bad TxPDO / SM3 config | |
-| **EE10.3** | PDO watchdog setting error | `0x0E10` | `0x3E100E10` | WD enable vs count mismatch; IgH AL **`0x001F` Invalid watchdog** class | bring-up note |
-| **EE10.4** | PLL / sync not completed | `0x0E10` | `0x4E100E10` | SAFEOP→OP with DC but no sync; AL **`0x002D` No Sync** class | bring-up note |
-| **EE11.x** | ESI / EEPROM | `0x5530` / `0x0E11` | `0xnE110E11` | Wrong ESI vs drive | |
-| **EE13.0** | EtherCAT sync period setting error | `0x6320` | `0x0E130E13` | Cycle time rejected | |
-| **EE15.0** | Excessive EtherCAT sync period error | `0x0E15` | `0x0E150E15` | Sync period out of range | |
+| Panel (as read) | Manual | Name | `0x603F` | `0x203F` Aux. | Desk / IgH hint | Seen? |
+|---|---|---|---|---|---|---|
+| **EE080** | EE08.0 | SYNC signal loss | `0x0E08` | `0x0E080E08` | Lost SYNC while OP | |
+| **EE081** | EE08.1 | Network status switchover | `0x0E08` | `0x1E080E08` | OP drop while enabled (kill CM) | **Yes** |
+| **EE083** | EE08.3 | Network cable improper | `0x0E08` | `0x3E080E08` | Link flap / empty slaves | **Yes** |
+| **EE084** | EE08.4 | Data frame loss | `0x0E08` | `0x4E080E08` | Bad WC / EMC | |
+| **EE085** | EE08.5 | Data frame transfer | `0x0E08` | `0x5E080E08` | Upstream invalid frame | |
+| **EE086** | EE08.6 | Data update timeout | `0x0E08` | `0x6E080E08` | No PDO too long | |
+| **EE093** | EE09.3 | Homing method setting | `0x6320` | `0x3E090E09` | Bad `0x6098` | |
+| **EE095** | EE09.5 | PDO mapping limit | `0x6320` | `0x5E090E09` | Too many objects | |
+| **EE101** | EE10.1 | SM2 setting | `0x0E10` | `0x1E100E10` | Bad RxPDO | |
+| **EE102** | EE10.2 | SM3 config | `0x0E10` | `0x2E100E10` | Bad TxPDO | |
+| **EE103** | EE10.3 | PDO watchdog setting | `0x0E10` | `0x3E100E10` | AL `0x001F` class | bring-up |
+| **EE104** | EE10.4 | PLL / sync incomplete | `0x0E10` | `0x4E100E10` | AL `0x002D` class | bring-up |
+| **EE11x** | EE11.x | ESI / EEPROM | `0x5530` / `0x0E11` | `0xnE110E11` | Wrong ESI | |
+| **EE130** | EE13.0 | Sync period setting | `0x6320` | `0x0E130E13` | Cycle rejected | |
+| **EE150** | EE15.0 | Excessive sync period | `0x0E15` | `0x0E150E15` | Period out of range | |
+
+### Drive / motor thermal & overload
+
+| Panel (as read) | Manual | Name | `0x603F` | `0x203F` Aux. | Desk / IgH hint | Seen? |
+|---|---|---|---|---|---|---|
+| **E6200** | E620.0 | Motor overload | `0x3230` | `0x06200620` | Accumulative motor heat; statusword Fault (e.g. `5816`); **wait ≥30 s** before reset; often after hard CSP demos / prior E640 | **Yes** — after `spin_bare_motor_demo2_…`; see note **d04** |
+| **E6400** | E640.0 | IGBT over-temperature | `0x4210` | `0x06400640` | With `auto_fault_reset: true` → blink ↔ `_88rn` loop | **Yes** — note **d03** |
+| **E6401** | E640.1 | Flywheel diode over-temp | `0x0640` | `0x16400640` | Same thermal family | |
 
 AL-only failures (panel may still show `_28ry` / drop toward `_18ry` **without** an `E…` code):
 
 | Panel / symptom | IgH observation | Usual cause on this desk |
 |---|---|---|
 | Stays `_28ry` or falls to `_18ry` | activate timeout; never `OP` | link flap, DC off when drive requires DC, bad PDO YAML |
-| Brief unlink | `Slaves: 0`, `Rx frames: 0` | CN3 unplug / bad RJ45 — can escalate to **EE08.3** if it happened in OP |
+| Brief unlink | `Slaves: 0`, `Rx frames: 0` | CN3 unplug / bad RJ45 — can escalate to **EE083** |
 
-When filling a new row: capture panel string → `0x6041` / `0x603F` / `0x203F` → `ethercat slaves -v` + one kernel AL line → add a “Seen on stacker?” note.
+When filling a new row: record **panel as read** (no dot) → manual form → `0x6041` / `0x603F` / `0x203F` → one desk note.
 
 ## Everyday combinations on this machine
 
-| You see | Decode | Expected? |
+| You see (panel) | Decode | Expected? |
 |---|---|---|
 | `_18ry` solid | AL Init + CSP + ready | **Yes** with RJ45 unplugged |
 | `_28ry` (`2` blinks ~400 ms) | AL PREOP + CSP + ready | **Yes** with cable in, Idle master |
 | `_48ry` (`4` slow blink) | AL SAFEOP + CSP + ready | During app activate |
 | `_88ry` / `…rn` (AL solid) | AL OP + CSP + ready/run | Target when CSP app is live |
 | `nr` | Not ready | Check main power, STO1/STO2 = 24 V |
-| All 5 flash + `E…` | Fault | Bad — see [error map](#panel--ethercat-common-error-map) / Troubleshooting Guide |
-| `EE083` (all 5 blink) | **EE08.3** cable / link | Reseat CN3; expect CoE `0x603F=0x0E08`, `0x203F=0x3E080E08` if mailbox reachable |
-
+| All 5 flash + `E…` | Fault | Bad — see [error map](#panel--ethercat-common-error-map) |
+| **`EE083`** | EE08.3 cable / link | Reseat CN3 |
+| **`E6400`** ↔ `_88rn` ~3 s | E640.0 + auto fault reset | Stop launch; cool; **d03** |
+| **`E6200`** blink | E620.0 motor overload | Wait ≥30 s; slower demos; **d04** |
 ## References
 
 1. **SV660N Series Servo Drive Advanced User Guide**
