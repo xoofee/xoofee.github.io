@@ -4,7 +4,7 @@ date: 2026-08-11
 permalink: /posts/2026/08/grub-default-savedefault-design/
 categories: tech
 tags: [grub, linux, bootloader, design, ux]
-excerpt: "GRUB splits reading and writing the saved boot entry across GRUB_DEFAULT and GRUB_SAVEDEFAULT. That flexibility helps admins and automation, but it exposes mechanism instead of user intent."
+excerpt: "GRUB splits reading and writing the saved boot entry across GRUB_DEFAULT and GRUB_SAVEDEFAULT. That flexibility helps admins and automation, but it exposes mechanism instead of user intent—and nested configfile menus can silently break remember-last-selection."
 ---
 
 While configuring GRUB, I found the relationship between `GRUB_DEFAULT` and `GRUB_SAVEDEFAULT` surprisingly confusing.
@@ -144,10 +144,10 @@ grub-editenv /boot/grub/grubenv list
 Example output:
 
 ```text
-saved_entry=ubuntu>gnulinux-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f>gnulinux-6.8.0-134-generic-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
+saved_entry=gnulinux-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f>gnulinux-6.8.0-134-generic-advanced-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
 ```
 
-The value is the menu path GRUB saved, not a friendly label. That makes the second source of truth more visible—and a bit harder to read by hand.
+The value is the menu path GRUB saved (`submenu-id>entry-id`), not a friendly label. That makes the second source of truth more visible—and a bit harder to read by hand.
 
 The user has to understand the relationship between them.
 
@@ -226,6 +226,82 @@ This avoids having both:
 
 which can confuse users.
 
+## Pitfall: nested `configfile` breaks saved defaults
+
+Even with both options set correctly, "remember last selection" can still fail if you chain menus with `configfile`.
+
+A common custom ESP setup looks like this:
+
+```text
+firmware
+    |
+    v
+\EFI\boot\bootx64.efi          (outer menu: ubuntu / PE / rescue)
+    |
+    |  configfile /EFI/ubuntu/grub.cfg
+    v
+Ubuntu /boot/grub/grub.cfg     (inner menu: kernels, advanced, memtest)
+```
+
+`update-grub` only regenerates the inner `grub.cfg`. The outer `/EFI/boot/grub.cfg` is hand-maintained and often looks like:
+
+```grub
+menuentry 'ubuntu' {
+	configfile /EFI/ubuntu/grub.cfg
+}
+```
+
+When you pick an entry in the **inner** menu, `savedefault` writes `${chosen}` into `grubenv`. With that nesting, the saved path can pick up the outer menuentry title as a prefix:
+
+```text
+saved_entry=ubuntu>gnulinux-simple-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
+```
+
+On the next boot, the inner config does:
+
+```grub
+set default="${saved_entry}"
+```
+
+and looks up that path **only in its own menu**. There is no entry or submenu named `ubuntu` there—only ids like `gnulinux-simple-...`. The lookup fails, so GRUB falls back to the first entry every time.
+
+Symptoms that match this:
+
+* `/etc/default/grub` has `GRUB_DEFAULT=saved` and `GRUB_SAVEDEFAULT=true`
+* `update-grub` did put `set default="${saved_entry}"` and `savedefault` into `/boot/grub/grub.cfg`
+* selecting a different inner entry has no lasting effect
+* `grub-editenv list` shows a leading `ubuntu>` (or whatever the outer menuentry title is)
+
+A submenu path **inside the same** `grub.cfg` (for example `gnulinux-advanced-...>`…) is fine. The broken case is a prefix from a **parent menu that used `configfile`**, which the child menu cannot resolve.
+
+### Fix: `chainloader` instead of `configfile`
+
+Start Ubuntu's GRUB as its own bootloader instance so `${chosen}` is not nested under the outer entry:
+
+```grub
+menuentry 'ubuntu' {
+	chainloader /EFI/ubuntu/grubx64.efi
+}
+```
+
+(Use `shimx64.efi` instead if Secure Boot requires it.)
+
+After that, a normal top-level save looks like:
+
+```text
+saved_entry=gnulinux-simple-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
+```
+
+which matches an `--id` in the inner menu, so the highlight sticks.
+
+To clear a bad value while testing:
+
+```bash
+sudo grub-editenv /boot/grub/grubenv set saved_entry=gnulinux-simple-731f9edc-9ac5-4b58-84dd-a9c3d61c7b3f
+```
+
+(or set the advanced-kernel path you actually want). If the outer menu keeps using `configfile`, the next interactive selection may write the bad `ubuntu>...` prefix again.
+
 ## Why does GRUB keep the current design?
 
 The current design is optimized for flexibility:
@@ -256,11 +332,11 @@ The separation between:
 
 provides flexibility, especially for `grub-set-default` and automation.
 
-However, it also introduces complexity by exposing multiple sources of boot state.
+However, it also introduces complexity by exposing multiple sources of boot state—and when menus are nested with `configfile`, the saved path can become invalid in the menu that has to resolve it.
 
 A cleaner design would either:
 
 1. provide a single "remember last selection" option, or
 2. use one authoritative saved entry as the only source of truth.
 
-The current design prioritizes flexibility over simplicity.
+The current design prioritizes flexibility over simplicity. If you use a custom outer GRUB menu, prefer `chainloader` into distro GRUB when you care about `GRUB_SAVEDEFAULT`.
