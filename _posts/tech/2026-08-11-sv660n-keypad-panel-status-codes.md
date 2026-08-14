@@ -65,7 +65,8 @@ ethercat slaves -v    # State: INIT / PREOP / SAFEOP / OP
 | **EoE** | Ethernet over EtherCAT | Optional Ethernet tunnel; can contend with CoE on the mailbox if enabled in IgH. |
 | **CiA402** | Drive profile | Standard servo objects / state machine (`0x6040` / `0x6041`, modes, …). |
 | **S‑ON** | Servo ON | Enable; panel `ry` → **`rn`**. Over EtherCAT via CiA402 controlword. |
-| **CSP** | Cyclic Synchronous Position | Mode **`8`**: master sends target position every cycle. |
+| **CSP** | Cyclic Synchronous Position | Mode **`8`**: master sends target position every cycle. Panel 3rd digit **`8`**. |
+| **CSV** | Cyclic Synchronous Velocity | Mode **`9`**: master sends target velocity (`0x60FF`) every cycle. Panel 3rd digit **`9`** → composite **`_89rn`** when OP + running. |
 | **DC** | Distributed Clocks | EtherCAT time sync; bad DC timing → sync / AL errors. |
 | **IgH** | EtherLab EtherCAT Master | Kernel master (`/dev/EtherCAT0`, `ethercat` tool). |
 | **Domain** | Process-data domain | Master PDO memory map for one cycle. |
@@ -137,10 +138,10 @@ Also listed in §4.2.3: `reset` / `nr` / `ry` / `rn` for general status display.
 | `4` | Profile torque |
 | `6` | Homing |
 | `8` | Cyclic synchronous position (**CSP**) |
-| `9` | Cyclic synchronous velocity (CSV) |
+| `9` | Cyclic synchronous velocity (**CSV**) |
 | `A` | Cyclic synchronous torque (CST) |
 
-This stacker bring-up uses **CSP (`8`)** (`mode_of_operation: 8`).
+Stacker bring-up: **CSP (`8`)** via `mode:=csp` (default); **CSV (`9`)** via `mode:=csv`. Panel 3rd digit tracks `0x6060` / `0x6061`.
 
 ## Ports CN3 / CN4
 
@@ -208,8 +209,10 @@ SDO upload needs a reachable mailbox (usually PREOP+). In OP it often still work
 | `_18ry` solid | *(empty / link down)* or slave gone | n/a or unreachable | Cable out → AL Init on panel; master may show no slaves |
 | `_28ry` (`2` @ 400 ms) | `PREOP` | often Switch on disabled / Ready | Idle IgH + cable in |
 | `_48ry` (`4` slow blink) | `SAFEOP` | transitional | During activate / DC bring-up |
-| `_88ry` | `OP +` | Ready / Switched on | OP, not yet S‑ON |
-| `_88rn` | `OP +` | **Operation enabled** (e.g. `0x1637`) | Target for motion |
+| `_88ry` | `OP +` | Ready / Switched on | OP + **CSP**, not yet S‑ON |
+| `_88rn` | `OP +` | **Operation enabled** (e.g. `0x1637`) | Target for **CSP** motion |
+| `_89ry` | `OP +` | Ready / Switched on | OP + **CSV** (`0x6061=9`), not yet S‑ON |
+| `_89rn` | `OP +` | **Operation enabled** | Target for **CSV** motion (`mode:=csv`) |
 
 ### EtherCAT / network faults
 
@@ -256,8 +259,9 @@ When filling a new row: record **panel as read** (no dot) → manual form → `0
 |---|---|---|
 | `_18ry` solid | AL Init + CSP + ready | **Yes** with RJ45 unplugged |
 | `_28ry` (`2` blinks ~400 ms) | AL PREOP + CSP + ready | **Yes** with cable in, Idle master |
-| `_48ry` (`4` slow blink) | AL SAFEOP + CSP + ready | During app activate |
-| `_88ry` / `…rn` (AL solid) | AL OP + CSP + ready/run | Target when CSP app is live |
+| `_48ry` (`4` slow blink) | AL SAFEOP + mode + ready | During app activate |
+| `_88ry` / `_88rn` (AL solid) | AL OP + **CSP** + ready/run | Target when CSP app is live (`mode:=csp`) |
+| **`_89ry` / `_89rn`** | AL OP + **CSV** + ready/run | Target when CSV app is live (`mode:=csv`); 3rd digit **`9`**, not `8` |
 | `nr` | Not ready | Check main power, STO1/STO2 = 24 V |
 | All 5 flash + `E…` | Fault | Bad — see [error map](#panel--ethercat-common-error-map) |
 | **`EE083`** | EE08.3 cable / link | Reseat CN3 |
