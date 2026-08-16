@@ -1,7 +1,7 @@
 ---
 title: "Set Dell Battery Charge Limits on Linux with cctk"
 date: 2026-08-14
-permalink: /posts/2026/08/dell-battery-charge-limit-linux-smbios/
+permalink: /posts/2026/08/dell-battery-charge-limit-linux-cctk/
 categories: tech
 tags: [linux, ubuntu, dell, battery, cctk, latitude-5501, smbios]
 excerpt: "On Dell Latitude 5501, smbios-battery-ctl can read charge limits but cannot set them. Use Dell Command | Configure (cctk) to write Custom:50-80 to the EC."
