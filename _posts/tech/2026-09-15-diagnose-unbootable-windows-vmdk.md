@@ -16,6 +16,224 @@ Image and VM filenames and working paths below are fictional examples; standard 
 * TOC
 {:toc}
 
+## Copy-and-Paste Diagnostic Script
+
+Power off the VM, change `example-windows.vmdk` on the first line to your image path, and paste the **whole block** into a Linux terminal. Paths containing spaces can stay inside the quotes. It needs Python 3, `qemu-img`, `qemu-storage-daemon` with FUSE support, `sfdisk`, `ntfsinfo`, and `ntfsls`. Optional `fsck.fat` and `mdir` (from mtools) provide FAT and EFI-file checks.
+
+The script prints results to the terminal, opens the source read-only, and removes its temporary exports when it exits. It discovers partition offsets rather than assuming the layout from this article. If the partition table is missing, it scans allocated data for NTFS boot-sector candidates; that scan can take several minutes. A candidate is not automatically a recovered partition.
+
+```bash
+python3 - "example-windows.vmdk" <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import struct
+import subprocess as sp
+import sys
+import tempfile
+import time
+
+required = ['qemu-img', 'qemu-storage-daemon', 'sfdisk', 'ntfsinfo', 'ntfsls']
+missing = [name for name in required if not shutil.which(name)]
+if missing:
+    sys.exit('Missing tools: ' + ', '.join(missing))
+source = Path(sys.argv[1]).expanduser().resolve()
+if not source.is_file():
+    sys.exit('Image file does not exist; edit the first line.')
+if not os.access('/dev/fuse', os.R_OK | os.W_OK):
+    sys.exit('/dev/fuse is unavailable or inaccessible.')
+
+def run(args):
+    return sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, text=True)
+
+def note(label, message):
+    print(f'[{label}] {message}', flush=True)
+
+info_result = run(['qemu-img', 'info', '--output=json', str(source)])
+if info_result.returncode:
+    sys.exit(info_result.stderr)
+info = json.loads(info_result.stdout)
+if info.get('format') != 'vmdk':
+    sys.exit('This script expects a VMDK image.')
+capacity = info['virtual-size']
+note('INFO', f'Virtual capacity: {capacity / 2**30:.2f} GiB')
+check = run(['qemu-img', 'check', str(source)])
+note('PASS' if check.returncode == 0 else 'CHECK',
+     'VMDK container: ' + (check.stdout + check.stderr).strip())
+if check.returncode:
+    sys.exit('Container check did not pass; stopping before filesystem inspection.')
+
+processes = []
+logs = []
+summary = []
+with tempfile.TemporaryDirectory(prefix='vmdk-diagnose-') as tmp:
+    work = Path(tmp)
+
+    def export(name, offset=None, length=None):
+        target = work / (name + '.raw')
+        target.touch()
+        nodes = [
+            {'driver': 'file', 'node-name': 'src',
+             'filename': str(source), 'read-only': True},
+            {'driver': 'vmdk', 'node-name': 'disk',
+             'file': 'src', 'read-only': True},
+        ]
+        node = 'disk'
+        if offset is not None:
+            nodes.append({'driver': 'raw', 'node-name': 'part', 'file': 'disk',
+                          'offset': offset, 'size': length, 'read-only': True})
+            node = 'part'
+        cmd = ['qemu-storage-daemon']
+        for item in nodes:
+            cmd += ['--blockdev', json.dumps(item)]
+        cmd += ['--export', f'type=fuse,id=view,node-name={node},'
+                f'mountpoint={target},writable=off,allow-other=off']
+        log = open(work / (name + '.log'), 'w+')
+        logs.append(log)
+        proc = sp.Popen(cmd, stdout=log, stderr=log)
+        processes.append(proc)
+        for _ in range(100):
+            if proc.poll() is not None:
+                log.seek(0)
+                raise RuntimeError('Export failed: ' + log.read())
+            if target.stat().st_size > 0:
+                return target
+            time.sleep(0.1)
+        raise RuntimeError('Timed out waiting for the read-only FUSE export.')
+
+    def ntfs_fields(b):
+        if len(b) < 512 or b[3:11] != b'NTFS    ' or b[510:512] != b'\x55\xaa':
+            return None
+        bps = struct.unpack_from('<H', b, 11)[0]
+        spc = b[13]
+        if bps not in (512, 1024, 2048, 4096) or not spc or spc & (spc - 1):
+            return None
+        # NTFS stores the last sector index in this field.
+        length = (struct.unpack_from('<Q', b, 40)[0] + 1) * bps
+        return bps, spc, length
+
+    try:
+        disk = export('disk')
+        with disk.open('rb') as raw:
+            first = raw.read(512)
+            note('INFO', 'First sector: ' + ('all zero' if not any(first) else 'contains data'))
+            table_result = run(['sfdisk', '--json', str(disk)])
+            volumes = []
+            if table_result.returncode == 0:
+                table = json.loads(table_result.stdout)['partitiontable']
+                sector = table.get('sectorsize', 512)
+                entries = table.get('partitions', [])
+                note('PASS', f"Partition table: {table['label']}; {len(entries)} entries")
+                for i, entry in enumerate(entries, 1):
+                    start, length = entry['start'] * sector, entry['size'] * sector
+                    note('INFO', f"Partition {i}: {length / 2**30:.3f} GiB; type {entry.get('type', '?')}")
+                    if length and 0 <= start < start + length <= capacity:
+                        volumes.append((f'partition-{i}', start, length))
+                    else:
+                        note('CHECK', f'Partition {i} has an invalid byte range.')
+            else:
+                summary.append('No usable partition table detected; normal disk boot is not established.')
+                note('CHECK', 'No partition table; scanning allocated data for NTFS candidates...')
+                mapped = run(['qemu-img', 'map', '--output=json', str(source)])
+                if mapped.returncode:
+                    raise RuntimeError(mapped.stderr)
+                candidates = set()
+                for extent in json.loads(mapped.stdout):
+                    if not extent.get('data'):
+                        continue
+                    start, length = extent['start'], extent['length']
+                    for step in range(0, length, 8 * 1024 * 1024):
+                        position = start + step
+                        raw.seek(position)
+                        chunk = raw.read(min(8 * 1024 * 1024, length - step))
+                        at = chunk.find(b'NTFS    ')
+                        while at >= 0:
+                            offset = position + at - 3
+                            if offset >= 0 and offset % 512 == 0:
+                                raw.seek(offset)
+                                fields = ntfs_fields(raw.read(512))
+                                if fields and offset + fields[2] <= capacity:
+                                    candidates.add((offset, fields[2]))
+                            at = chunk.find(b'NTFS    ', at + 1)
+                for i, (offset, length) in enumerate(sorted(candidates), 1):
+                    note('CANDIDATE', f'NTFS at byte {offset}; {length / 2**30:.3f} GiB')
+                    volumes.append((f'candidate-{i}', offset, length))
+                if not candidates:
+                    summary.append('No plausible NTFS start found by this signature scan.')
+
+            for name, start, length in volumes:
+                raw.seek(start)
+                boot = raw.read(512)
+                fields = ntfs_fields(boot)
+                if fields:
+                    if fields[2] > length:
+                        note('CHECK', f'{name}: NTFS claims a size larger than its partition.')
+                    volume = export(name, start, length)
+                    result = run(['ntfsinfo', '-m', str(volume)])
+                    if result.returncode:
+                        note('FAIL', f'{name}: NTFS metadata access failed')
+                        print((result.stdout + result.stderr).strip())
+                        summary.append(f'{name}: NTFS inaccessible; metadata needs investigation.')
+                        continue
+                    note('PASS', f'{name}: NTFS metadata readable')
+                    listing = run(['ntfsls', '-p', '/Windows/System32', str(volume)])
+                    names = {line.strip().lower() for line in listing.stdout.splitlines()}
+                    if listing.returncode == 0 and 'ntoskrnl.exe' in names:
+                        note('PASS', f'{name}: Windows/System32 and ntoskrnl.exe entry found')
+                        summary.append(f'{name}: Windows records found; file contents not fully verified.')
+                    cluster = fields[0] * fields[1]
+                    mft, mirror = struct.unpack_from('<QQ', boot, 48)
+                    if all(0 <= c * cluster <= length - 4096 for c in (mft, mirror)):
+                        raw.seek(start + mft * cluster)
+                        main = raw.read(4096)
+                        raw.seek(start + mirror * cluster)
+                        backup = raw.read(4096)
+                        note('INFO', f'{name}: initial 4 KiB at MFT/mirror '
+                             + ('match' if main == backup else 'differ; inspect further'))
+                elif boot[54:62] == b'FAT16   ' or boot[82:90] == b'FAT32   ':
+                    volume = export(name, start, length)
+                    note('INFO', f'{name}: FAT boot-sector identifier found')
+                    if shutil.which('fsck.fat'):
+                        result = run(['fsck.fat', '-n', str(volume)])
+                        note('INFO', f'{name}: read-only FAT check, exit {result.returncode}')
+                        print((result.stdout + result.stderr).strip())
+                    else:
+                        note('SKIP', 'fsck.fat unavailable')
+                    if shutil.which('mdir'):
+                        for path in ['::/EFI/Boot/bootx64.efi',
+                                     '::/EFI/Microsoft/Boot/bootmgfw.efi',
+                                     '::/EFI/Microsoft/Boot/BCD']:
+                            result = run(['mdir', '-i', str(volume), path])
+                            note('FOUND' if result.returncode == 0 else 'CHECK',
+                                 f'{name}: {path}' + ('' if result.returncode == 0 else ' not confirmed'))
+                    else:
+                        note('SKIP', 'mdir unavailable; EFI boot files were not checked')
+                else:
+                    note('SKIP', f'{name}: filesystem not recognized by this script')
+        print('\n=== Diagnostic summary ===')
+        for message in summary:
+            print('- ' + message)
+        print('- PASS applies only to the named check, not to the entire disk.')
+        print('- Bootability is UNVERIFIED: firmware settings, BCD targets, and OS startup need separate checks.')
+    finally:
+        for proc in reversed(processes):
+            if proc.poll() is None:
+                proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except sp.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        for log in logs:
+            log.close()
+PY
+```
+
+`FAIL` for NTFS means that the filesystem tools could not access its metadata; their accompanying error text matters. `CHECK` and `SKIP` require attention and should not be counted as passes. The script does not rebuild partition tables, repair filesystems, decode BCD device references, or boot Windows. Its first-4-KiB MFT comparison is an observation, not a general NTFS consistency test.
+
+This automates the initial investigation. The manual analysis below explains the additional evidence used for the damaged image in this case; another image can produce different results.
+
 ## Separate the Questions Before Choosing Tools
 
 There are several layers between a host file and a running Windows installation:
