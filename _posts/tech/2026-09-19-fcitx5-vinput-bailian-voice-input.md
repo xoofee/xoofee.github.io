@@ -7,7 +7,7 @@ tags: [ubuntu, linux, fcitx5, voice-input, asr, bailian]
 excerpt: "Set up Fcitx5-VInput Lite with Alibaba Bailian's streaming speech recognition and configure a Ctrl + Alt + Shift recording shortcut through the Fcitx5 GUI."
 ---
 
-I wanted voice input on Ubuntu that could handle Chinese and English in the same sentence, including technical terms such as EtherCAT, PLC, Siemens, and Ubuntu. I already used Fcitx5 with a US keyboard and Wubi.
+I wanted voice input on Ubuntu that could handle Chinese and English in the same sentence. I already used Fcitx5 with a US keyboard and Wubi.
 
 The working setup uses **Fcitx5-VInput Lite with Alibaba Bailian cloud speech recognition**. I configured Left Ctrl + Left Alt + Left Shift as my recording shortcut through the Fcitx5 GUI. Holding the combination lets me speak, and releasing it finishes the recording so the recognized text can appear in the focused input field. Wubi remains available as before.
 
@@ -155,7 +155,7 @@ Replace `YOUR_BAILIAN_API_KEY` with the actual key. Keep it out of screenshots, 
 
 The model ID is an ASR model, not a general chat model. Alibaba's [speech recognition model guide](https://help.aliyun.com/zh/model-studio/asr-model) currently recommends this model for real-time recognition and lists support for Chinese, English, and recognition context. I chose it for this workflow; I did not run a comparative accuracy benchmark.
 
-The prompt supplies domain vocabulary to the recognizer. It is not an LLM rewriting stage or a separately provisioned weighted hotword dictionary, and it cannot guarantee correct spelling of every technical term. **The prompt is optional**: Chinese and English recognition still works if it is left empty:
+**The prompt is optional**: Chinese and English recognition still works if it is left empty:
 
 ```ini
 VINPUT_ASR_PROMPT=
@@ -178,7 +178,7 @@ The provider form also exposes these environment variables:
 
 These are configuration settings, not additional products to buy. Optional rows can remain blank in this adapter. Leaving the punctuation setting at its default does not mean that the transcript must contain no punctuation.
 
-For the first test, I kept language hints unset and used the vocabulary prompt. Language hint behavior depends on the model; there is no universal rule that specifying Chinese prevents English recognition.
+Leave language hints unset for the initial test. Language hint behavior depends on the model; there is no universal rule that specifying Chinese prevents English recognition.
 
 ## Save, Activate, and Dictate
 
@@ -211,7 +211,7 @@ fcitx5-configtool
 4. Select the recording trigger shortcut field and replace Right Alt by pressing **Left Ctrl + Left Alt + Left Shift**. Hold Ctrl and Alt first, then press Left Shift.
 5. Confirm the shortcut and click **Apply** or **OK** to save it.
 
-This GUI is separate from `vinput-gui`: Fcitx5's addon settings control the shortcut, while `vinput-gui` manages the recognition provider and daemon. I recommend capturing the shortcut in the GUI because it saves Fcitx5's key representation without having to guess the modifier syntax.
+This GUI is separate from `vinput-gui`: Fcitx5's addon settings control the shortcut, while `vinput-gui` manages the recognition provider and daemon. **Configuring the shortcut directly in the raw configuration file is difficult because Fcitx5's key names and modifier syntax are not obvious.** I recommend capturing the shortcut in the GUI, which writes the key representation for you.
 
 For reference, the GUI saved the following in `~/.config/fcitx5/conf/vinput.conf`:
 
@@ -231,7 +231,7 @@ Click inside a text editor or chat input field. Hold **Left Ctrl and Left Alt**,
 
 With `TriggerMode=Both`, the trigger supports both hold-to-talk and a brief press to toggle recording. Right Shift remains the VInput menu shortcut. If a desktop or application shortcut intercepts the combination, choose another binding through the same GUI.
 
-A useful test is a sentence containing Chinese, English, and a domain-specific name, such as saying that a PLC uses EtherCAT to control three servo axes. Check whether the result preserves the technical terms before adding optional LLM correction.
+Test with a short sentence mixing Chinese and English, then check the recognized text before adding optional LLM correction.
 
 ## Troubleshooting the Initial Setup
 
@@ -253,6 +253,6 @@ For authentication errors, verify that the key comes from Bailian, matches the e
 
 **Recording does not start or captures silence.** Confirm that an application input field has focus and that Fcitx5 is working there. Check the recording shortcut under **Fcitx5 Configuration → Addons → Vinput**, then select the intended microphone under **Capture Device** in `vinput-gui`.
 
-**Recognition works, but technical words are wrong.** Refine the domain prompt and test with the same sentences. Microphone quality, background noise, pronunciation, and the model all affect the result. Add LLM correction only after the basic transcription path works; it can introduce extra latency, cost, and unwanted wording changes.
+**Recognition works, but the transcript is inaccurate.** Check microphone quality and background noise, then repeat a short test sentence. Pronunciation and the model also affect the result. Add LLM correction only after the basic transcription path works; it can introduce extra latency, cost, and unwanted wording changes.
 
 The completed setup lets me dictate into desktop applications while retaining my existing keyboard and Wubi input methods. The essential pieces were the cloud-capable Lite package, the correct Bailian adapter, a matching regional API key, and activating that provider before recording.
