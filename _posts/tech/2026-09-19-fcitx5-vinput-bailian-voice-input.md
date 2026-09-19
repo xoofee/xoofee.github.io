@@ -4,12 +4,12 @@ date: 2026-09-19
 permalink: /posts/2026/09/fcitx5-vinput-bailian-voice-input/
 categories: tech
 tags: [ubuntu, linux, fcitx5, voice-input, asr, bailian]
-excerpt: "Set up Fcitx5-VInput Lite with Alibaba Bailian's streaming speech recognition, keep your existing keyboard and Wubi input methods, and dictate with Right Alt."
+excerpt: "Set up Fcitx5-VInput Lite with Alibaba Bailian's streaming speech recognition and configure a Ctrl + Alt + Shift recording shortcut through the Fcitx5 GUI."
 ---
 
 I wanted voice input on Ubuntu that could handle Chinese and English in the same sentence, including technical terms such as EtherCAT, PLC, Siemens, and Ubuntu. I already used Fcitx5 with a US keyboard and Wubi.
 
-The working setup uses **Fcitx5-VInput Lite with Alibaba Bailian cloud speech recognition**. I hold Right Alt to speak, release it to finish, and the recognized text appears in the focused input field. Wubi remains available as before.
+The working setup uses **Fcitx5-VInput Lite with Alibaba Bailian cloud speech recognition**. I configured Left Ctrl + Left Alt + Left Shift as my recording shortcut through the Fcitx5 GUI. Holding the combination lets me speak, and releasing it finishes the recording so the recognized text can appear in the focused input field. Wubi remains available as before.
 
 This post records the setup with `fcitx5-vinput-lite` version `2.3.25-1ppa1~noble1` on Ubuntu. Provider names and cloud model availability may change; the configuration below reflects the setup used in September 2026.
 
@@ -155,7 +155,11 @@ Replace `YOUR_BAILIAN_API_KEY` with the actual key. Keep it out of screenshots, 
 
 The model ID is an ASR model, not a general chat model. Alibaba's [speech recognition model guide](https://help.aliyun.com/zh/model-studio/asr-model) currently recommends this model for real-time recognition and lists support for Chinese, English, and recognition context. I chose it for this workflow; I did not run a comparative accuracy benchmark.
 
-The prompt supplies domain vocabulary to the recognizer. It is not an LLM rewriting stage or a separately provisioned weighted hotword dictionary, and it cannot guarantee correct spelling of every technical term.
+The prompt supplies domain vocabulary to the recognizer. It is not an LLM rewriting stage or a separately provisioned weighted hotword dictionary, and it cannot guarantee correct spelling of every technical term. **The prompt is optional**: Chinese and English recognition still works if it is left empty:
+
+```ini
+VINPUT_ASR_PROMPT=
+```
 
 The adapter documents the URL above as the legacy Beijing endpoint. It also supports workspace-specific endpoints. If using that route, omit the explicit URL and set `VINPUT_ASR_WORKSPACE_ID` as described in the adapter documentation; an explicit URL takes precedence.
 
@@ -191,21 +195,41 @@ vinput provider use bailian-qwen-audio3-stream
 systemctl --user restart vinput-daemon.service
 ```
 
-Click inside a text editor or chat input field. **Hold Right Alt, speak, and release it to finish.** Wait for the recognized text to be inserted.
+The initial recording shortcut on my installation was **Right Alt**. It worked for the first test, but I then changed it to **Left Ctrl + Left Alt + Left Shift** using the GUI below.
 
-My Fcitx addon settings used:
+## Configure the Recording Shortcut Through the GUI
+
+Use the Fcitx5 configuration tool for key bindings:
+
+```bash
+fcitx5-configtool
+```
+
+1. Open the **Addons** tab.
+2. Find **Vinput** (or **语音输入** in the Chinese interface).
+3. Click its configuration button, shown as a gear icon.
+4. Select the recording trigger shortcut field and replace Right Alt by pressing **Left Ctrl + Left Alt + Left Shift**. Hold Ctrl and Alt first, then press Left Shift.
+5. Confirm the shortcut and click **Apply** or **OK** to save it.
+
+This GUI is separate from `vinput-gui`: Fcitx5's addon settings control the shortcut, while `vinput-gui` manages the recognition provider and daemon. I recommend capturing the shortcut in the GUI because it saves Fcitx5's key representation without having to guess the modifier syntax.
+
+For reference, the GUI saved the following in `~/.config/fcitx5/conf/vinput.conf`:
 
 ```ini
 TriggerMode=Both
 
 [TriggerKey]
-0=Alt_R
+0=Control+Alt+Shift+Shift_L
 
 [MenuKey]
 0=Shift_R
 ```
 
-With these settings, Right Alt supports both hold-to-talk and tap-to-toggle recording. Right Shift opens the VInput menu. These bindings can be changed, so check the addon configuration if your installation behaves differently.
+The repeated `Shift` in `Control+Alt+Shift+Shift_L` is the representation the GUI generated; there is no need to simplify it manually. `Shift_L` identifies the left Shift key, while the Control and Alt modifier flags do not enforce which side of the keyboard is used. I use all three left-hand keys, but this should not be read as a strict left-only restriction for every modifier.
+
+Click inside a text editor or chat input field. Hold **Left Ctrl and Left Alt**, then press and hold **Left Shift** while speaking. Release Left Shift to finish, then release the other modifiers and wait for the text to appear.
+
+With `TriggerMode=Both`, the trigger supports both hold-to-talk and a brief press to toggle recording. Right Shift remains the VInput menu shortcut. If a desktop or application shortcut intercepts the combination, choose another binding through the same GUI.
 
 A useful test is a sentence containing Chinese, English, and a domain-specific name, such as saying that a PLC uses EtherCAT to control three servo axes. Check whether the result preserves the technical terms before adding optional LLM correction.
 
@@ -227,7 +251,7 @@ journalctl --user -u vinput-daemon.service -n 50 --no-pager
 
 For authentication errors, verify that the key comes from Bailian, matches the endpoint region, and has access to the selected model. For quota errors, check that model's allowance and billing status in Bailian. Redact credentials before sharing logs.
 
-**Recording does not start or captures silence.** Confirm that an application input field has focus and that Fcitx5 is working there. Check the Right Alt binding, then select the intended microphone under **Capture Device** in `vinput-gui`.
+**Recording does not start or captures silence.** Confirm that an application input field has focus and that Fcitx5 is working there. Check the recording shortcut under **Fcitx5 Configuration → Addons → Vinput**, then select the intended microphone under **Capture Device** in `vinput-gui`.
 
 **Recognition works, but technical words are wrong.** Refine the domain prompt and test with the same sentences. Microphone quality, background noise, pronunciation, and the model all affect the result. Add LLM correction only after the basic transcription path works; it can introduce extra latency, cost, and unwanted wording changes.
 
