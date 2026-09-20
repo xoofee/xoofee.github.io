@@ -1,5 +1,5 @@
 ---
-title: "Play a Sound When Codex Finishes a Task in VS Code"
+title: "Play a Sound When Codex Finishes a Task"
 date: 2026-09-20
 permalink: /posts/2026/09/codex-task-completion-sound-vscode/
 categories: tech
@@ -7,7 +7,9 @@ tags: [codex, vscode, ubuntu, linux, notifications, python]
 excerpt: "Configure a user-wide Codex completion beep on Ubuntu with notify, a small Python event filter, and PipeWire audio playback."
 ---
 
-When Codex is working in VS Code, I often switch to another window. A short sound when its turn ends saves me from repeatedly checking the chat panel.
+When Codex is working, I often switch to another window. A short sound when its turn ends saves me from repeatedly checking its progress.
+
+Codex provides a general `notify` mechanism for running a command when a turn completes. It can be used with the CLI and the IDE extension. VS Code was the interface used for this setup, but the notification configuration belongs to Codex.
 
 On an Ubuntu 24.04 desktop, the working setup was a local sound player, a small Python script, and Codex's user-level `notify` setting. The sound command ran successfully, and I could hear the beep.
 
@@ -28,11 +30,11 @@ In this setup, `pw-play` and the sound file were already installed. If either is
 
 Listen for the sound. A successful process exit is useful evidence, but hearing it confirms that playback reaches the intended speakers or headphones.
 
-This example assumes Codex runs on the local Linux desktop. With SSH, containers, or another remote environment, the command runs on the Codex host; configuring it there does not automatically route sound to the computer displaying VS Code.
+This example assumes Codex runs on the local Linux desktop. With SSH, containers, or another remote environment, the command runs on the Codex host; configuring it there does not automatically route sound to the computer where you are reading the conversation.
 
 ## Connect Playback to a Completion Event
 
-The [official notification documentation](https://developers.openai.com/zh-Hans/docs/notifications) describes using `notify` on the connected Codex host for IDE completion notifications. The [advanced configuration guide](https://learn.chatgpt.com/docs/config-file/config-advanced#notifications) specifies that Codex passes the notification as a JSON command-line argument and currently supports the `agent-turn-complete` event.
+The [official notification documentation](https://developers.openai.com/zh-Hans/docs/notifications) covers external notifications for the CLI and using `notify` on the connected Codex host for the IDE extension. The [advanced configuration guide](https://learn.chatgpt.com/docs/config-file/config-advanced#notifications) specifies that Codex passes the notification as a JSON command-line argument and currently supports the `agent-turn-complete` event.
 
 Create `~/.codex/notify-completion-sound.py` with this content:
 
@@ -97,7 +99,7 @@ If `notify` already exists, edit the existing setting instead of adding a second
 
 Using the user-level configuration makes this a default across local Codex chats that use that configuration. It is not an account-wide setting synchronized to other computers. If you use a custom `CODEX_HOME`, edit the configuration in that directory instead.
 
-Reload VS Code to make sure the extension picks up the change:
+Restart the Codex client or session so it loads the updated configuration. For the CLI, exit and launch Codex again. If you use the VS Code extension, reload its window:
 
 ```text
 Ctrl+Shift+P → Developer: Reload Window
@@ -127,7 +129,7 @@ Here, the appended argument becomes the shell's `$0`, which the command does not
 
 ## What If the First Answer Beeps Twice?
 
-I noticed an occasional double beep around the first answer in a new chat, while later answers produced one beep. Automatic chat-title generation seemed like a possible explanation, but I did not verify that it emitted the second notification.
+In the VS Code extension, I noticed an occasional double beep around the first answer in a new chat, while later answers produced one beep. Automatic chat-title generation seemed like a possible explanation, but I did not verify that it emitted the second notification.
 
 There are two different cases to distinguish:
 
@@ -140,4 +142,4 @@ For this use, the occasional extra beep was acceptable. I left it as a minor beh
 
 ## Disable the Sound
 
-Remove the `notify` setting, or restore the previous notification command if there was one, then reload VS Code. The Python script can remain on disk; it will not run through this setting once the reference is removed.
+Remove the `notify` setting, or restore the previous notification command if there was one, then restart the Codex client or session. The Python script can remain on disk; it will not run through this setting once the reference is removed.
