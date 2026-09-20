@@ -1,7 +1,7 @@
 ---
 title: "Play a Sound When Codex Finishes a Task"
 date: 2026-09-20
-permalink: /posts/2026/09/codex-task-completion-sound-vscode/
+permalink: /posts/2026/09/codex-task-completion-sound/
 categories: tech
 tags: [codex, vscode, ubuntu, linux, notifications, python]
 excerpt: "Configure a user-wide Codex completion beep on Ubuntu with notify, a small Python event filter, and PipeWire audio playback."
