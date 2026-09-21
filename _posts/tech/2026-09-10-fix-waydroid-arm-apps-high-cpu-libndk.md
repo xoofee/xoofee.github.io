@@ -78,6 +78,10 @@ From the `waydroid_script` directory:
 ```bash
 sudo venv/bin/python3 main.py -a 13 uninstall libhoudini
 sudo venv/bin/python3 main.py -a 13 install libndk
+
+# for a reverse
+sudo venv/bin/python3 main.py -a 13 uninstall libndk
+sudo venv/bin/python3 main.py -a 13 install libhoudini
 ```
 
 If either command fails, resolve that error before continuing. Remove Houdini first because the installers use overlapping ARM library directories. Installing both on top of each other is not a useful comparison.
