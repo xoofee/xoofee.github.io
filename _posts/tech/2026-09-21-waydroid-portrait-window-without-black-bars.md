@@ -40,15 +40,16 @@ sudo waydroid shell -- wm size reset
 sudo waydroid shell -- wm density reset
 ```
 
-Enable Waydroid's desktop window integration and set the host surface dimensions:
+Set the Waydroid surface dimensions:
 
 ```bash
-waydroid prop set persist.waydroid.multi_windows true
 waydroid prop set persist.waydroid.width 600
 waydroid prop set persist.waydroid.height 1000
 waydroid prop set persist.waydroid.width_padding 0
 waydroid prop set persist.waydroid.height_padding 0
 ```
+
+`persist.waydroid.multi_windows` is optional. It changes Waydroid's desktop-integration behavior, but it is not required for a correctly sized portrait Waydroid window. A setup with `persist.waydroid.multi_windows=false` can work normally when the surface dimensions are set explicitly.
 
 Restart the session so the compositor receives the new dimensions, then launch the app:
 
@@ -88,7 +89,7 @@ sudo waydroid shell -- getprop waydroid.display_width
 sudo waydroid shell -- getprop waydroid.display_height
 ```
 
-The first three should report the requested window configuration, while `waydroid.display_width` and `waydroid.display_height` should reflect the active Waydroid surface after the session restarts.
+The width and height properties should report the requested window dimensions, while `waydroid.display_width` and `waydroid.display_height` should reflect the active Waydroid surface after the session restarts. `persist.waydroid.multi_windows` may be either `true` or `false`; it is not the setting that determines the portrait dimensions.
 
 ## A misleading connection with ARM translators
 
@@ -106,4 +107,4 @@ When an Android app appears as a portrait rectangle surrounded by black space, d
 
 For a portrait Ubuntu window, use Waydroid's `width` and `height` properties, leave Android's display at its physical size, and let GNOME position the resulting surface.
 
-For more Waydroid properties, see the [Waydroid property options](https://github.com/waydroid/docs/blob/master/usage/waydroid-prop-options.md) and the [official multi-window guidance](https://docs.waydro.id/usage/install-on-desktops#launch-waydroid-in-multi-window-mode).
+For more Waydroid properties, see the [Waydroid property options](https://github.com/waydroid/docs/blob/master/usage/waydroid-prop-options.md). If separate desktop application windows are desired, the [official multi-window guidance](https://docs.waydro.id/usage/install-on-desktops#launch-waydroid-in-multi-window-mode) covers that optional mode.
