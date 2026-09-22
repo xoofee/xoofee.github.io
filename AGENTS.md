@@ -32,3 +32,9 @@ tags: [tag1, tag2]
 - Do not re-scan multiple posts or re-check general repository structure unless there is a concrete sign that the format changed or the user asked for something unusual.
 - If the user asks for a post draft only, do not spend time re-checking the repository structure unless there is a concrete reason to think the format changed.
 - Unless explicitly requested, do not attempt local verification such as running builds, tests, or preview servers.
+
+## Ruby and Jekyll verification
+
+- Do not install Ruby, Bundler, Ruby gems, or Jekyll dependencies locally for blog changes.
+- Do not run `bundle install`, `bundle exec jekyll build`, or a local Jekyll preview unless the required tooling is already available and the user explicitly requests it.
+- Treat local Jekyll verification as unavailable by default; report it as skipped rather than installing dependencies to perform it.
