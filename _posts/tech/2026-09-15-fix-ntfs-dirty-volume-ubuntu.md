@@ -4,94 +4,93 @@ date: 2026-09-15
 permalink: /posts/2026/09/fix-ntfs-dirty-volume-ubuntu/
 categories: tech
 tags: [ubuntu, linux, ntfs, storage, troubleshooting]
-excerpt: "Ubuntu refused to mount an NTFS partition because its dirty flag was set. Checking it with ntfsfix and clearing the flag restored access without rebooting into Windows."
+excerpt: "Ubuntu's ntfs3 driver can refuse a volume that still carries the NTFS dirty flag, even after chkdsk reports no errors. Diagnose it safely and clear the flag with ntfsfix."
 ---
 
-My NTFS partition `/dev/sdb1`, labeled `seagate2t`, would not mount on Ubuntu. Other partitions on the same disk mounted successfully. The kernel log identified the problem:
+An NTFS partition can refuse to mount on Ubuntu even when Windows `chkdsk /f` reports no filesystem errors. In one such case, Ubuntu's kernel log still showed that the volume was marked dirty, and the in-kernel `ntfs3` driver refused to mount it. A read-only `ntfsfix` check could read the main NTFS metadata, but it did not clear the dirty flag.
 
-```text
-ntfs3: sdb1: It is recommened to use chkdsk.
-ntfs3: sdb1: volume is dirty and "force" flag is not set!
-```
-
-I wanted to fix it without rebooting into Windows. Running a no-action check with `ntfsfix`, then using `ntfsfix -d` and mounting again, resolved this case.
+This guide shows how to identify that specific condition and try the limited Ubuntu-side repair. It does not treat a successful metadata check as proof that every file or filesystem structure is healthy.
 
 * TOC
 {:toc}
 
-## Identify the Partition and the Mount Error
+## Confirm which partition is affected
 
-First, check the device name, filesystem, and mount status:
-
-```bash
-lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS
-findmnt --source /dev/sdb1
-```
-
-In my case, `/dev/sdb1` was an approximately 1.6 TB NTFS partition with no mount point. **Use your own partition name in the commands below.** Device names can change after reconnecting a disk.
-
-Read the current boot's kernel messages:
+Reconnectable disks can receive different device names, so identify the partition immediately before running a repair:
 
 ```bash
-journalctl -k -b --no-pager | grep -Ei 'sdb1|ntfs3'
+lsblk -o NAME,PATH,TRAN,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS
 ```
 
-The repeated `volume is dirty` message explained why the `ntfs3` driver refused the mount. A dirty flag indicates that the filesystem needs checking; it can follow an unclean shutdown, unsafe removal, or filesystem errors. The log alone did not establish which event caused it here.
+Use the NTFS partition's current path in place of `/dev/sdXN` below. Check whether it is mounted:
 
-There were no disk I/O errors in the current boot log I inspected. That observation does not establish the overall health of the disk.
+```bash
+findmnt --source /dev/sdXN
+```
 
-## Check Without Making Changes
+If it is mounted, close applications using it and unmount it before continuing. For a USB disk with other mounted partitions, be careful to unmount and repair only the intended NTFS partition.
 
-`ntfsfix` was already installed on my system. If it is missing, install its package:
+## Read the kernel's reason for refusing the mount
+
+After a failed mount, check the recent kernel log:
+
+```bash
+sudo dmesg --ctime | tail -n 40
+```
+
+The relevant message in this case was:
+
+```text
+ntfs3: sdXN: volume is dirty and "force" flag is not set!
+```
+
+That message identifies the dirty flag as the reason the `ntfs3` driver refused the mount. The generic `mount` error by itself is less informative. Do not use the `force` mount option as a repair: it bypasses the refusal without clearing the flag or checking why it was set.
+
+## Run a no-write check
+
+If `ntfsfix` is not installed, it is provided by the `ntfs-3g` package:
 
 ```bash
 sudo apt install ntfs-3g
 ```
 
-The partition must be unmounted before repair. If `findmnt` shows that it is mounted, close applications using it and unmount it first:
+Run its no-action mode on the unmounted partition:
 
 ```bash
-udisksctl unmount -b /dev/sdb1
+sudo ntfsfix -n /dev/sdXN
 ```
 
-Then run the no-action check:
+The `-n` option does not write repairs. Output saying that the MFT and MFT mirror were processed, the alternate boot sector is OK, and the volume was processed successfully is reassuring for those checks. It does not clear the volume's dirty flag, so `ntfs3` may continue to refuse the mount.
+
+If the command reports I/O errors or metadata problems it cannot handle, stop and investigate those first. For important data, prioritize making a backup or disk image before changing filesystem metadata.
+
+## Clear the dirty flag with ntfsfix
+
+If the Windows check completed, `ntfsfix -n` reported no errors, and the kernel specifically reports a dirty volume, try the write operation on the unmounted partition:
 
 ```bash
-sudo ntfsfix -n /dev/sdb1
+sudo ntfsfix -d /dev/sdXN
 ```
 
-The `-n` option reports what the tool would do without writing to the partition. Read the output before proceeding. If it reports I/O errors or problems it cannot handle, stop and investigate those errors before attempting a repair. Back up irreplaceable files before modifying filesystem metadata whenever possible.
+The `-d` option clears the dirty flag if the volume can be fixed and mounted. It changes filesystem metadata. `ntfsfix` is limited: it handles some fundamental NTFS inconsistencies and can reset the NTFS journal, but it is not a Linux replacement for a full Windows `chkdsk` check. [Ubuntu `ntfsfix` manual](https://manpages.ubuntu.com/manpages/resolute/man8/ntfsfix.8.html)
 
-Use `sudo` even for this check: reading the raw block device requires permission. An unprivileged attempt on my system printed `Permission denied`, followed by a generic corruption warning. That failed attempt was not evidence of additional filesystem corruption.
-
-## Repair and Clear the Dirty Flag
-
-After the basic checks succeed, run:
+If it completes successfully, retry mounting the partition:
 
 ```bash
-sudo ntfsfix -d /dev/sdb1
+sudo mkdir -p /mnt/ntfs-data
+sudo mount -t ntfs3 /dev/sdXN /mnt/ntfs-data
 ```
 
-According to the installed `ntfsfix` manual, `-d` clears the dirty flag if the volume can be fixed and mounted. This command can modify filesystem metadata; it is the repair step.
-
-Once it completes successfully, mount the partition:
+Check whether it mounted:
 
 ```bash
-udisksctl mount -b /dev/sdb1
+findmnt --source /dev/sdXN
 ```
 
-The command prints the mount location. You can also check it with:
+If mounting still fails, inspect the newest kernel messages. Do not repeatedly clear the flag without understanding a new error.
 
-```bash
-findmnt --source /dev/sdb1
-```
+## When Windows reports no errors
 
-After this procedure, my partition mounted successfully and was usable again, without a Windows reboot.
+A clean `chkdsk /f` result and a dirty-flag refusal from Linux are not necessarily contradictory. In this case, the Windows command reported no problems, while the Linux kernel continued to see the flag and block `ntfs3` mounting. The read-only `ntfsfix -n` check also completed successfully but left the state unchanged; the next Ubuntu-side step is `ntfsfix -d`.
 
-## What This Fix Does—and Its Limits
-
-`ntfsfix` repairs some fundamental NTFS inconsistencies and can reset the NTFS journal. It is not a Linux equivalent of a full Windows `chkdsk` check. The no-action check and a successful mount do not prove that every file and filesystem structure is healthy.
-
-The `-d` option matters here: without it, `ntfsfix` normally sets the dirty flag to request a later filesystem check. See `man ntfsfix` for the behavior of the version installed on your machine.
-
-Although the kernel message mentions `force`, forcing a mount bypasses the dirty-flag refusal without resolving its cause. If `ntfsfix` fails or the flag keeps returning, investigate the new logs and arrange a fuller NTFS check rather than repeatedly clearing it. For this particular incident, the basic Ubuntu repair was enough to restore access.
+If the flag returns, `ntfsfix -d` fails, or the disk reports I/O errors, stop using the partition for writes and investigate the drive and filesystem further. Clearing a flag is not a substitute for a complete filesystem check or a backup.
