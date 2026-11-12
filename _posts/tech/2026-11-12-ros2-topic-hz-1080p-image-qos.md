@@ -46,6 +46,179 @@ ros2 topic info -v /camera/image_raw
 
 In the example, the bag player offered `RELIABLE` QoS. A raw subscriber using reliable QoS with depth 10 received the expected image rate during 0.25× playback: 7.482 Hz, close to the expected 7.48 Hz. A raw subscriber using the sensor-data profile received about 2.58 Hz in a separate run. These runs changed both reliability and queue depth, so they show that the measurement was QoS-sensitive; they do not isolate which policy caused the difference.
 
+## A small raw-rate monitor
+
+For a clearer comparison, this standalone Python tool follows `ros2 topic hz`'s raw-subscription approach and lets you select a reliable, depth-10 QoS profile. It discovers the topic type automatically, then measures callback arrival intervals with a monotonic clock. It does not deserialize image payloads. Save it as `ros2topic_hz.py` in a ROS 2 Python environment and run it after sourcing that environment:
+
+```python
+#!/usr/bin/env python3
+"""Measure a ROS 2 topic's receive rate without deserializing message payloads.
+
+By default this follows ``ros2 topic hz`` and uses sensor-data QoS. Use
+``--reliable`` to compare against a reliable, depth-10 subscription.
+
+Examples:
+    ros2topic_hz.py /cam0/image_raw
+    ros2topic_hz.py /cam0/image_raw --reliable
+"""
+
+from __future__ import annotations
+
+import argparse
+import math
+import statistics
+import sys
+import time
+from collections import deque
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import (
+    DurabilityPolicy,
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
+from rosidl_runtime_py.utilities import get_message
+
+
+def find_topic_type(node: Node, topic: str) -> tuple[str, str] | None:
+    """Return the resolved topic name and its unique type, if discovered."""
+    resolved = node.resolve_topic_name(topic)
+    matches = [types for name, types in node.get_topic_names_and_types() if name == resolved]
+    if not matches:
+        return None
+    types = matches[0]
+    if len(types) != 1:
+        raise ValueError(f"Topic {resolved} has ambiguous types: {', '.join(types)}")
+    return resolved, types[0]
+
+
+def positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("topic", help="ROS 2 topic name, such as /cam0/image_raw")
+    parser.add_argument(
+        "--window", "-w", type=positive_int, default=10000,
+        help="number of message intervals to average (default: 10000)",
+    )
+    parser.add_argument(
+        "--reliable", action="store_true",
+        help="use reliable, keep-last depth-10 QoS instead of sensor-data QoS",
+    )
+    args = parser.parse_args()
+
+    rclpy.init()
+    node = rclpy.create_node("ros2topic_hz_raw")
+    try:
+        topic_info = None
+        while rclpy.ok() and topic_info is None:
+            topic_info = find_topic_type(node, args.topic)
+            if topic_info is None:
+                rclpy.spin_once(node, timeout_sec=0.1)
+        if topic_info is None:
+            return 0
+
+        topic, type_name = topic_info
+        message_type = get_message(type_name)
+        if args.reliable:
+            qos = QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=10,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.VOLATILE,
+            )
+            print(f"Subscribing raw to {topic} [{type_name}] with reliable QoS (depth 10).")
+        else:
+            qos = qos_profile_sensor_data
+            print(f"Subscribing raw to {topic} [{type_name}] with sensor-data QoS.")
+
+        intervals: deque[float] = deque(maxlen=args.window)
+        last_message_time: float | None = None
+        sample_count = 0
+
+        def on_message(_serialized_message: bytes) -> None:
+            nonlocal last_message_time, sample_count
+            current = time.monotonic()
+            sample_count += 1
+            if last_message_time is not None:
+                intervals.append(current - last_message_time)
+            last_message_time = current
+
+        node.create_subscription(message_type, topic, on_message, qos, raw=True)
+        print("Waiting for messages... (Ctrl+C to stop)", flush=True)
+        last_print_time = time.monotonic()
+        last_printed_count = 0
+        while rclpy.ok():
+            rclpy.spin_once(node, timeout_sec=0.1)
+            current = time.monotonic()
+            if current - last_print_time < 1.0 or sample_count == last_printed_count:
+                continue
+            if intervals:
+                mean = statistics.fmean(intervals)
+                stddev = math.sqrt(statistics.fmean((x - mean) ** 2 for x in intervals))
+                print(
+                    f"average rate: {1.0 / mean if mean else 0.0:.3f}\n"
+                    f"\tmin: {min(intervals):.3f}s max: {max(intervals):.3f}s "
+                    f"std dev: {stddev:.5f}s window: {len(intervals)}",
+                    flush=True,
+                )
+            last_print_time = current
+            last_printed_count = sample_count
+        return 0
+    except KeyboardInterrupt:
+        return 0
+    except (ImportError, ValueError) as exc:
+        print(f"ros2topic_hz.py: {exc}", file=sys.stderr)
+        return 2
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+With playback at normal speed, the reliable subscription reported about 29.94 Hz:
+
+```text
+python3 ros2topic_hz.py /cam0/image_raw --reliable
+Subscribing raw to /cam0/image_raw [sensor_msgs/msg/Image] with reliable QoS (depth 10).
+Waiting for messages... (Ctrl+C to stop)
+average rate: 29.970
+        min: 0.023s max: 0.044s std dev: 0.00274s window: 30
+average rate: 29.950
+        min: 0.023s max: 0.044s std dev: 0.00368s window: 60
+average rate: 29.942
+```
+
+At 0.25× playback, it reported about 7.48 Hz, as expected from a 30 Hz source played at one quarter speed:
+
+```text
+python3 ros2topic_hz.py /cam0/image_raw --reliable
+Subscribing raw to /cam0/image_raw [sensor_msgs/msg/Image] with reliable QoS (depth 10).
+Waiting for messages... (Ctrl+C to stop)
+average rate: 7.497
+        min: 0.123s max: 0.143s std dev: 0.00753s window: 7
+average rate: 7.486
+        min: 0.123s max: 0.145s std dev: 0.00728s window: 15
+average rate: 7.482
+```
+
+Use `--reliable` only when the publisher offers compatible reliable QoS. A reliable subscriber will not match a best-effort publisher. The monitor measures received callback timing; use bag timestamps to assess the source timeline and a message count over a known interval to quantify losses.
+
 The same bag was also replayed at 1× with a best-effort publisher override. `ros2 topic hz` reported windowed rates between about 13.8 and 27.2 Hz, with substantial jitter, rather than a stable 30 Hz. This confirms that changing the publisher to best effort did not make the CLI measurement reliable in that setup. It does not, by itself, identify whether the losses occurred in the publisher, transport, middleware queues, or subscriber scheduling.
 
 ## Override playback QoS when testing a specific match
